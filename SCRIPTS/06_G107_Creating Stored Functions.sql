@@ -143,6 +143,65 @@ DELIMITER ;
 -- Testing of Functions
 SELECT isValidStatus("In Process","In Process");
 
+-- Check if an order is shipped
+DROP FUNCTION IF EXISTS isOrderShipped;
+DELIMITER $$
+CREATE FUNCTION isOrderShipped(orderNumber INT)
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    DECLARE orderStatus VARCHAR(20);
+    
+    -- Fetch the current status of the order
+    SELECT status INTO orderStatus
+    FROM orders
+    WHERE orders.orderNumber = orderNumber;
+    
+    -- Return TRUE if the status is "Shipped"
+    IF orderStatus = 'Shipped' THEN
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
+END$$
+DELIMITER ;
 
+-- Check if only quantityOrdered and priceEach are being updated
+DROP FUNCTION IF EXISTS isUpdateValid;
+DELIMITER $$
+CREATE FUNCTION isUpdateValid(old_quantity INT, new_quantity INT, old_price DECIMAL(10,2), new_price DECIMAL(10,2))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    -- Allow the update if only quantityOrdered and priceEach are being modified
+    IF old_quantity != new_quantity OR old_price != new_price THEN
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
+END$$
+DELIMITER ;
+
+-- Check if referenceNo can be updated (only if the order is "Shipped")
+DROP FUNCTION IF EXISTS canUpdateReference;
+DELIMITER $$
+CREATE FUNCTION canUpdateReference(orderNumber INT, old_ref VARCHAR(20), new_ref VARCHAR(20))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+    -- Check if the reference number is being updated
+    IF old_ref != new_ref THEN
+        -- Allow update only if order status is "Shipped"
+        IF isOrderShipped(orderNumber) THEN
+            RETURN TRUE;
+        ELSE
+            RETURN FALSE;
+        END IF;
+    ELSE
+        -- No change in reference number
+        RETURN TRUE;
+    END IF;
+END$$
+DELIMITER ;
 
 

@@ -134,9 +134,33 @@ BEGIN
         END IF;	
     END IF;
     
-    -- Continue this for the other status checking
-    
-    RETURN TRUE;
+    -- from Shipped to Disputed or Completed
+	ELSEIF (param_oldstatus = 'Shipped') THEN
+		IF (param_newstatus != 'Disputed' AND param_newstatus != 'Completed') THEN
+			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
+			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+		END IF;
+        
+	-- from Disputed to Resolved
+	ELSEIF (param_oldstatus = 'Disputed') THEN
+		IF (param_newstatus != 'Resolved') THEN
+			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
+			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+		END IF;
+        
+	-- from Resolved  to Completed
+	ELSEIF (param_oldstatus = 'Resolved') THEN
+		IF (param_newstatus != 'Completed') THEN
+			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
+			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+		END IF;
+	
+	-- Completed should not allow any further changes
+	ELSEIF (param_oldstatus = 'Completed') THEN
+		SET errormessage := 'No status changes are allowed once the order is completed.';
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+	END IF;
+  RETURN TRUE;
 END $$
 DELIMITER ;
 

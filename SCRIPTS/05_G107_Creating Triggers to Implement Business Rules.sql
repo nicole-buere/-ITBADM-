@@ -185,42 +185,46 @@ DELIMITER ;
 
 DROP TRIGGER IF EXISTS orders_AFTER_UPDATE;
 DELIMITER $$
-CREATE TRIGGER `orders_AFTER_UPDATE` AFTER UPDATE ON `orders` FOR EACH ROW BEGIN
-	DECLARE var_quantityOrdered DECIMAL(9,2);
+
+CREATE TRIGGER `orders_AFTER_UPDATE` AFTER UPDATE ON `orders` FOR EACH ROW 
+BEGIN
+    -- Declare the necessary variables
+    DECLARE var_quantityOrdered DECIMAL(9,2);
     DECLARE var_productCode VARCHAR(15);
+    DECLARE done INT DEFAULT 0;
 
-    -- Handle cancelled orders
-    -- Handle cancelled orders
-    IF new.status = "Cancelled" THEN
-		-- Iterate through each product in the order and return to inventory
-		DECLARE cur CURSOR FOR
-			SELECT productCode, quantityOrdered 
-			FROM orderdetails 
-			WHERE orderNumber = old.orderNumber;
-		DECLARE done INT DEFAULT 0;
+    -- Declare a cursor to iterate through the products of the order
+    DECLARE cur CURSOR FOR
+        SELECT productCode, quantityOrdered 
+        FROM orderdetails 
+        WHERE orderNumber = old.orderNumber;
 
-		DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    -- Declare a handler for the cursor
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 
-		OPEN cur;
+    -- Only execute if the order is being cancelled
+    IF new.status = 'Cancelled' THEN
+        -- Open the cursor to fetch each product
+        OPEN cur;
 
-		-- Loop through each order detail row
-		LOOP
-			FETCH cur INTO var_productCode, var_quantityOrdered;
-			IF done THEN
-				LEAVE LOOP;
-			END IF;
+        read_loop: LOOP
+            FETCH cur INTO var_productCode, var_quantityOrdered;
+            IF done THEN
+                LEAVE read_loop;
+            END IF;
 
-			-- Update inventory
-			UPDATE current_products
-			SET quantityInStock = quantityInStock + var_quantityOrdered
-			WHERE productCode = var_productCode;
-		END LOOP;
+            -- Update the product inventory by returning the ordered quantity
+            UPDATE current_products
+            SET quantityInStock = quantityInStock + var_quantityOrdered
+            WHERE productCode = var_productCode;
+        END LOOP;
 
-		CLOSE cur;
-	END IF;
-    
+        -- Close the cursor after processing
+        CLOSE cur;
+    END IF;
 END $$
 DELIMITER ;
+
 
 DROP TRIGGER IF EXISTS orders_BEFORE_DELETE;
 DELIMITER $$

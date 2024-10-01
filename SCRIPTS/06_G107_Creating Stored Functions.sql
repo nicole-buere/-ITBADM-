@@ -132,7 +132,6 @@ BEGIN
 			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
 			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;		
         END IF;	
-    END IF;
     
     -- from Shipped to Disputed or Completed
 	ELSEIF (param_oldstatus = 'Shipped') THEN

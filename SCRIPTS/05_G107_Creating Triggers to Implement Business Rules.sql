@@ -131,6 +131,26 @@ CREATE TRIGGER `orders_BEFORE_UPDATE` BEFORE UPDATE ON `orders` FOR EACH ROW BEG
 		SET errormessage = CONCAT("Order number ", new.ordernumber, " cannot be updated without a customer");
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
+
+    -- Check valid status transitions (preventing status reversion)
+    IF NOT isValidStatus(old.status, new.status) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid status transition: Status can only progress forward, not backward.';
+    END IF;
+    
+    -- Set shipped date when status is 'Shipped'
+    IF (new.status = 'Shipped' AND old.status != 'Shipped') THEN
+		SET new.shippedDate = NOW();
+	END IF;
+    
+    -- Prevent any updates or changes once status is "Completed"
+    IF (old.status = 'Completed') THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No further activity is allowed on completed orders.';
+    END IF;
+    
+    -- Append new comments without removing existing ones
+    IF (new.comments IS NOT NULL) THEN
+        SET new.comments = CONCAT(old.comments, '\n', new.comments);
+    END IF;
     
 END $$
 DELIMITER ;

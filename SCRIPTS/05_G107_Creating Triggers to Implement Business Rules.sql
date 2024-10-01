@@ -189,20 +189,34 @@ CREATE TRIGGER `orders_AFTER_UPDATE` AFTER UPDATE ON `orders` FOR EACH ROW BEGIN
 	DECLARE var_quantityOrdered DECIMAL(9,2);
     DECLARE var_productCode VARCHAR(15);
 
-    IF (new.status = "Cancelled") THEN -- if the order was updated to be cancelled
-		-- SELECT the quantity ordered of the order
-		SELECT	quantityOrdered
-		INTO	var_quantityOrdered
-		FROM	orderdetails
-		WHERE	orderdetails.orderNumber = old.orderNumber;
-        -- SELECT the productCode of the ordered product of the order
-        SELECT	productCode
-		INTO	var_productCode
-		FROM	orderdetails
-		WHERE	orderdetails.orderNumber = old.orderNumber;
-        
-		-- return the stock back to the inventory
-		UPDATE current_products SET quantityInStock = quantityInStock + var_quantityOrdered WHERE productCode = var_productCode;
+    -- Handle cancelled orders
+    -- Handle cancelled orders
+    IF new.status = "Cancelled" THEN
+		-- Iterate through each product in the order and return to inventory
+		DECLARE cur CURSOR FOR
+			SELECT productCode, quantityOrdered 
+			FROM orderdetails 
+			WHERE orderNumber = old.orderNumber;
+		DECLARE done INT DEFAULT 0;
+
+		DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+		OPEN cur;
+
+		-- Loop through each order detail row
+		LOOP
+			FETCH cur INTO var_productCode, var_quantityOrdered;
+			IF done THEN
+				LEAVE LOOP;
+			END IF;
+
+			-- Update inventory
+			UPDATE current_products
+			SET quantityInStock = quantityInStock + var_quantityOrdered
+			WHERE productCode = var_productCode;
+		END LOOP;
+
+		CLOSE cur;
 	END IF;
     
 END $$
@@ -221,7 +235,7 @@ DELIMITER ;
 
 DROP TRIGGER IF EXISTS orderdetails_BEFORE_UPDATE;
 DELIMITER $$
-CREATE TRIGGER orderdetails_BEFORE_UPDATE BEFORE UPDATE ON orderdetails FOR EACH ROW
+CREATE TRIGGER `orderdetails_BEFORE_UPDATE` BEFORE UPDATE ON `orderdetails` FOR EACH ROW
 BEGIN
     DECLARE errormessage VARCHAR(200);
     DECLARE var_status 		VARCHAR(15);
@@ -244,8 +258,9 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
 
+    -- Check if the associated order is cancelled
     -- SELECT the status of the order that the orderdetails row is based on
-		SELECT	status
+		SELECT	`status`
 		INTO	var_status
 		FROM	orders
 		WHERE	orders.orderNumber = old.orderNumber;
@@ -255,17 +270,17 @@ BEGIN
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
     
-    -- Check if the new quantity will cause the inventory to go below 0
-    IF ((SELECT quantityInStock+old.quantityOrdered-new.quantityOrdered FROM current_products WHERE productCode = new.productCode) < 0) THEN
+    -- Prevent inventory going below zero
+	IF (SELECT quantityInStock + old.quantityOrdered - new.quantityOrdered FROM current_products WHERE productCode = new.productCode) < 0 THEN
 		SET errormessage = CONCAT("The quantity being ordered for ", new.productCode, " will make the inventory quantity go below zero");
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-    END IF;
+	END IF;
     
-    -- Check if line number is being updated
-    IF (new.orderlinenumber != old.orderlinenumber) THEN
+    -- Prevent changing the order line number
+	IF new.orderLineNumber != old.orderLineNumber THEN
 		SET errormessage = "The line number cannot be updated";
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-    END IF;
+	END IF;
 
 
 END$$

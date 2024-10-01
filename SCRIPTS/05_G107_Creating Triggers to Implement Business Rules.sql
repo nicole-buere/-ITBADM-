@@ -31,6 +31,11 @@ CREATE TRIGGER `orderdetails_BEFORE_INSERT` BEFORE INSERT ON `orderdetails` FOR 
     -- This rule involved a complicated access to MSRP, and such access to MSRP should be done using
     -- STORED FUNCITON.
 
+    IF (NEW.priceEach < getMSRP(NEW.productCode)*0.8) OR (NEW.priceEach > getMSRP(NEW.productCode)*2) THEN
+   		SET errormessage = CONCAT("The price for this ", new.productCode, " should not be below 80% and above 100% of its ", getMSRP(NEW.productCode));
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage; 
+    END IF;
+
 END $$
 DELIMITER ;
 
@@ -130,3 +135,54 @@ CREATE TRIGGER `orders_BEFORE_UPDATE` BEFORE UPDATE ON `orders` FOR EACH ROW BEG
 END $$
 DELIMITER ;
 
+DROP TRIGGER IF EXISTS orderdetails_BEFORE_UPDATE;
+DELIMITER $$
+CREATE TRIGGER orderdetails_BEFORE_UPDATE BEFORE UPDATE ON orderdetails FOR EACH ROW
+BEGIN
+    DECLARE errormessage VARCHAR(200);
+
+    -- Check if the order is shipped
+    IF isOrderShipped(OLD.orderNumber) THEN
+        SET errormessage = 'No updates are allowed after the order is Shipped.';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
+
+    -- Ensure only quantityOrdered and priceEach are updated
+    IF NOT isUpdateValid(OLD.quantityOrdered, NEW.quantityOrdered, OLD.priceEach, NEW.priceEach) THEN
+        SET errormessage = 'Only quantityOrdered and priceEach can be updated.';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
+
+    -- Check if reference number can be updated
+    IF NOT canUpdateReference(OLD.orderNumber, OLD.referenceNo, NEW.referenceNo) THEN
+        SET errormessage = 'Reference number can only be updated when the order status is Shipped.';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
+
+END$$
+
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS orderdetails_BEFORE_DELETE;
+SHOW TRIGGERS LIKE 'orderdetails';
+DELIMITER $$
+CREATE TRIGGER orderdetails_BEFORE_DELETE
+BEFORE DELETE ON orderdetails
+FOR EACH ROW
+BEGIN
+    DECLARE errormessage VARCHAR(200);
+
+    -- Check if the order is already shipped
+    IF isOrderShipped(OLD.orderNumber) THEN
+        SET errormessage = 'No deletions are allowed after the order is Shipped.';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
+
+    -- Check if the status is "Pending" or "In Process" to allow cancellation
+    IF (SELECT status FROM orders WHERE orderNumber = OLD.orderNumber) NOT IN ('Pending', 'In Process') THEN
+        SET errormessage = 'Ordered products can only be cancelled when the order is in Pending or In Process status.';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
+
+END$$
+DELIMITER ;

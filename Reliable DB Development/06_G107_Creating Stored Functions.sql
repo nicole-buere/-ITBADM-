@@ -86,6 +86,9 @@ BEGIN
 END $$
 DELIMITER ;
 
+-- -- PART 4B.C (PEGALAN)
+GRANT EXECUTE ON FUNCTION getMSRP TO salesmodule, inventorymodule, paymentmodule;
+
 -- Create a function that checks for the valid values of status
 
 DROP FUNCTION IF EXISTS isStatusValid;

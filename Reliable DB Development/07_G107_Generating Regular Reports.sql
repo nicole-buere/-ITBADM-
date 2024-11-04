@@ -139,48 +139,59 @@ DELIMITER ;
 
 DROP TABLE IF EXISTS quantity_ordered_reports;
 CREATE TABLE quantity_ordered_reports (
-	reportid		INT(10) AUTO_INCREMENT,
-	reportyear		INT(4),
-    reportmonth 	INT(2),
-    productLine 	VARCHAR(50),
-    productCode		VARCHAR(15),
-    country			VARCHAR(50),
-    officeCode		VARCHAR(10),
-    salesRepNumber	INT,
-    totalQuantityOrdered INT,
+    reportid            INT(10) AUTO_INCREMENT,
+    reportyear          INT(4),
+    reportmonth         INT(2),
+    productLine         VARCHAR(50),
+    productCode         VARCHAR(15),
+    country             VARCHAR(50),
+    officeCode          VARCHAR(10),
+    salesRepNumber      INT,
+    quantityOrdered     INT,
     PRIMARY KEY (reportid)
 );
-DELIMITER $$
 
 
 DROP PROCEDURE IF EXISTS generate_quantity_ordered_report;
+DELIMITER $$
+
 CREATE PROCEDURE generate_quantity_ordered_report()
 BEGIN
     -- Insert a record into reports_inventory for tracking
     INSERT INTO reports_inventory (generationdate, generatedby, reportdesc)
     VALUES (NOW(), USER(), CONCAT('Quantity Ordered Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
+
     -- Insert report data into quantity_ordered_reports table
-    INSERT INTO quantity_ordered_reports (reportyear, reportmonth, productLine, productCode, country, officeCode, salesRepNumber, totalQuantityOrdered)
-    SELECT		YEAR(o.orderdate)	as	reportyear,
-                MONTH(o.orderdate)	as	reportmonth,
-                p.productCode,
-                pp.productLine,
-                e.lastName, e.firstName,
-                ofc.country, ofc.officeCode,     
-                SUM(od.quantityordered) AS QUANTITYORDERED
-    FROM		orders o	JOIN	orderdetails od			ON	o.orderNumber=od.orderNumber
-                            JOIN	products p				ON	od.productCode=p.productCode
-                            JOIN	product_productlines pp	ON	p.productCode=pp.productCode
-                            JOIN	customers c 			ON	o.customerNumber=c.customerNumber
-                            JOIN	salesrepassignments sa	ON	c.salesRepEmployeeNumber=sa.employeeNumber
-                            JOIN	offices ofc				ON	sa.officeCode=ofc.officeCode
-                            JOIN	salesrepresentatives sr	ON	sa.employeeNumber=sr.employeeNumber
-                            JOIN	employees e				ON	sr.employeeNumber=e.employeeNumber
-    WHERE		o.status IN ('Shipped','Completed')
-    GROUP BY	reportyear, reportmonth, p.productcode,pp.productline, e.employeeNumber, ofc.officeCode;
+    INSERT INTO quantity_ordered_reports (reportyear, reportmonth, productLine, productCode, country, officeCode, salesRepNumber, quantityOrdered)
+    SELECT  
+        YEAR(o.orderdate) AS reportyear,
+        MONTH(o.orderdate) AS reportmonth,
+        pp.productLine,
+        p.productCode,
+        ofc.country,
+        ofc.officeCode,
+        sr.employeeNumber AS salesRepNumber,
+        SUM(od.quantityOrdered) AS quantityOrdered
+    FROM    
+        orders o
+        LEFT JOIN orderdetails od ON o.orderNumber = od.orderNumber
+        LEFT JOIN products p ON od.productCode = p.productCode
+        LEFT JOIN product_productlines pp ON p.productCode = pp.productCode
+        LEFT JOIN customers c ON o.customerNumber = c.customerNumber
+        LEFT JOIN salesrepassignments sa ON c.salesRepEmployeeNumber = sa.employeeNumber
+        LEFT JOIN offices ofc ON sa.officeCode = ofc.officeCode
+        LEFT JOIN salesrepresentatives sr ON sa.employeeNumber = sr.employeeNumber
+        LEFT JOIN employees e ON sr.employeeNumber = e.employeeNumber
+    WHERE   
+        o.status IN ('Shipped', 'Completed')
+    GROUP BY 
+        reportyear, reportmonth, p.productCode, pp.productLine, ofc.officeCode, sr.employeeNumber;
 
 END $$
+
 DELIMITER ;
+
+
 
 DROP EVENT IF EXISTS generate_monthly_quantity_ordered_report;
 CREATE EVENT generate_monthly_quantity_ordered_report 
@@ -188,6 +199,7 @@ ON SCHEDULE EVERY 1 MONTH
 STARTS '2000-01-01 00:00:00'
 DO
 CALL generate_quantity_ordered_report;
+
 
 DELIMITER ; 
 

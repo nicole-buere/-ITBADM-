@@ -165,7 +165,7 @@ CREATE TRIGGER `orders_BEFORE_UPDATE` BEFORE UPDATE ON `orders` FOR EACH ROW BEG
     
     -- Check if the updated orderdate is before the original orderdate
     IF (new.orderdate < old.orderdate) THEN
-		SET errormessage = CONCAT("Updated orderdate cannot be less than the origianl date of ", old.orderdate);
+		SET errormessage = CONCAT("Updated orderdate cannot be less than the original date of ", old.orderdate);
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
     
@@ -174,7 +174,7 @@ CREATE TRIGGER `orders_BEFORE_UPDATE` BEFORE UPDATE ON `orders` FOR EACH ROW BEG
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
     
-        -- Check for the precense of customer
+        -- Check for the presence of customer
     IF (new.customernumber IS NULL) THEN
 		SET errormessage = CONCAT("Order number ", new.ordernumber, " cannot be updated without a customer");
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;

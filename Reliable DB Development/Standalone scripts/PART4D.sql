@@ -9,6 +9,7 @@ BEGIN
     DECLARE total_order_amount DECIMAL(10, 2);
     DECLARE max_order_amount DECIMAL(10, 2);
     DECLARE order_count INT;
+    DECLARE done INT DEFAULT 0;
     
     -- Cursor to loop through each customer
     DECLARE cur CURSOR FOR

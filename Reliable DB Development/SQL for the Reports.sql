@@ -68,7 +68,7 @@ SELECT * FROM `dbsalesv2.0`.product_pricing;
 UPDATE product_pricing SET startdate='2000-01-01';
 
 DROP TABLE IF EXISTS sales_reports;
-CREATE TABLE monthly_sales_reports (
+CREATE TABLE sales_reports (
     reportyear INT(4),
     reportmonth INT(2),
     productCode VARCHAR(15),
@@ -84,7 +84,7 @@ CREATE TABLE monthly_sales_reports (
 );
 DELIMITER $$
 
--- REPORT01
+-- REPORT01 (PEGALAN)
 
 CREATE EVENT generate_sales_report 
 ON SCHEDULE EVERY 1 MONTH
@@ -119,8 +119,32 @@ DELIMITER ;
 
 
 
--- REPORT02
-SELECT		YEAR(o.orderdate)	as	reportyear,
+-- REPORT02 (TAN)
+
+DROP TABLE IF EXISTS quantity_ordered_reports;
+CREATE TABLE quantity_ordered_reports (
+	reportid		INT(10),
+	reportyear		INT(4),
+    reportmonth 	INT(2),
+    productLine 	VARCHAR(50),
+    productCode		VARCHAR(15),
+    country			VARCHAR(50),
+    officeCode		VARCHAR(10),
+    salesRepNumber	INT,
+    totalQuantityOrdered INT,
+    PRIMARY KEY (reportid, reportyear, reportmonth)
+);
+DELIMITER $$
+
+
+CREATE EVENT generate_quantity_ordered_report 
+ON SCHEDULE EVERY 1 MONTH
+STARTS '2000-01-01 00:00:00'
+DO
+BEGIN
+    -- Insert report data into quantity_ordered_reports table
+    INSERT INTO quantity_ordered_reports (reportyear, reportmonth, productLine, productCode, country, officeCode, salesRepNumber, totalQuantityOrdered)
+    SELECT		YEAR(o.orderdate)	as	reportyear,
 			MONTH(o.orderdate)	as	reportmonth,
             p.productCode,
             pp.productLine,
@@ -137,6 +161,10 @@ FROM		orders o	JOIN	orderdetails od			ON	o.orderNumber=od.orderNumber
                         JOIN	employees e				ON	sr.employeeNumber=e.employeeNumber
 WHERE		o.status IN ('Shipped','Completed')
 GROUP BY	reportyear, reportmonth, p.productcode,pp.productline, e.employeeNumber, ofc.officeCode;
+
+END $$
+DELIMITER ;
+
 
 
 

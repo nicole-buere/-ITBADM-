@@ -353,3 +353,16 @@ CREATE TRIGGER `employees_BEFORE_UPDATE` BEFORE UPDATE ON `employees` FOR EACH R
     
 END $$
 DELIMITER ;
+
+-- PART 4B.D (BUERE)
+DELIMITER $$
+DROP TRIGGER IF EXISTS `current_product_BEFORE_UPDATE`;
+CREATE TRIGGER `current_product_BEFORE_UPDATE`BEFORE UPDATE ON `dbsalesV2.0`.`current_products`FOR EACH ROW BEGIN
+    DECLARE errormessage VARCHAR(200);
+    -- Check if the product type is being modified
+    IF OLD.product_type != NEW.product_type THEN
+		SET errormessage = CONCAT('Product type for ', new.productCode, ' cannot be modified from ', old.product_type, ' to ', new.product_type);
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
+END$$
+DELIMITER ;

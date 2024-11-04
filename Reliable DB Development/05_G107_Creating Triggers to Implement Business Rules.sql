@@ -313,3 +313,33 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+-- create trigger that will stop employee names and number from being updated
+DROP TRIGGER IF EXISTS employees_BEFORE_UPDATE;
+DELIMITER $$
+CREATE TRIGGER `employees_BEFORE_UPDATE` BEFORE UPDATE ON `employees` FOR EACH ROW BEGIN
+		
+	-- PART 4C.B (TAN)
+    DECLARE errormessage	VARCHAR(200);
+    
+    -- check if employee number is being changed
+	IF(new.employeeNumber != old.employeeNumber) THEN
+		SET errormessage = "Employee numbers cannot be edited";
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
+    
+    -- check if name is being changed
+	IF(new.lastName != old.lastName OR new.firstName != old.firstName) THEN
+		SET errormessage = "Employee name cannot be edited";
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
+    
+    -- PART 4C.C (TAN)
+	-- check if employee is active in the organization
+	IF(old.activeRecord = 'N') THEN
+		SET errormessage = "Inactive employee records cannot be edited";
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
+    
+END $$
+DELIMITER ;

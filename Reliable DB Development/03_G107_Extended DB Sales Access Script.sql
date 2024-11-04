@@ -92,7 +92,12 @@ GRANT	SELECT, UPDATE, DELETE, INSERT	ON	ref_shipmentstatus			TO	systemmodule;
 GRANT	SELECT, UPDATE, DELETE, INSERT	ON	riders						TO	systemmodule;
 
 
+-- PART 4B.C (PEGALAN)
+REVOKE SELECT ON `dbsalesV2.0`.`products` FROM salesmodule, inventorymodule, paymentmodule;
+REVOKE SELECT ON `dbsalesV2.0`.`product_pricing` FROM salesmodule, paymentmodule;
+REVOKE SELECT ON `dbsalesV2.0`.`product_wholesale` FROM salesmodule, inventorymodule, paymentmodule;
 
+GRANT EXECUTE ON FUNCTION getMSRP TO salesmodule, inventorymodule, paymentmodule;
 
 
 

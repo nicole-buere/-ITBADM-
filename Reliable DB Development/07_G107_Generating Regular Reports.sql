@@ -94,16 +94,14 @@ CREATE TABLE sales_reports (
 );
 DELIMITER $$
 
--- REPORT01 (PEGALAN)
+-- REPORT01
 
-CREATE EVENT generate_sales_report 
-ON SCHEDULE EVERY 1 MONTH
-STARTS '2000-01-01 00:00:00'
-DO
+DROP PROCEDURE IF EXISTS generate_sales_report;
+CREATE PROCEDURE generate_sales_report()
 BEGIN
     -- Insert a record into reports_inventory for tracking
     INSERT INTO reports_inventory (generationdate, generatedby, reportdesc)
-    VALUES (NOW(), 'System', CONCAT('Monthly Sales Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
+    VALUES (NOW(), USER(), CONCAT('Sales Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
     -- Insert monthly report data into sales_reports table
     INSERT INTO sales_reports (reportyear, reportmonth, productCode, productLine, employeeLastName, employeeFirstName, country, officeCode, sales, discount, markup)
     SELECT		YEAR(o.orderdate)	as	reportyear,
@@ -129,8 +127,15 @@ BEGIN
 END $$
 DELIMITER ;
 
+DROP EVENT IF EXISTS generate_monthly_sales_report;
+CREATE EVENT generate_monthly_sales_report 
+ON SCHEDULE EVERY 1 MONTH
+STARTS '2000-01-01 00:00:00'
+DO
+CALL generate_sales_report();
+DELIMITER ;
 
--- REPORT02 (TAN)
+-- REPORT02
 
 DROP TABLE IF EXISTS quantity_ordered_reports;
 CREATE TABLE quantity_ordered_reports (
@@ -148,14 +153,12 @@ CREATE TABLE quantity_ordered_reports (
 DELIMITER $$
 
 
-CREATE EVENT generate_quantity_ordered_report 
-ON SCHEDULE EVERY 1 MONTH
-STARTS '2000-01-01 00:00:00'
-DO
+DROP PROCEDURE IF EXISTS generate_quantity_ordered_report;
+CREATE PROCEDURE generate_quantity_ordered_report()
 BEGIN
     -- Insert a record into reports_inventory for tracking
     INSERT INTO reports_inventory (generationdate, generatedby, reportdesc)
-    VALUES (NOW(), 'System', CONCAT('Monthly Quantity Ordered Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
+    VALUES (NOW(), USER(), CONCAT('Quantity Ordered Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
     -- Insert report data into quantity_ordered_reports table
     INSERT INTO quantity_ordered_reports (reportyear, reportmonth, productLine, productCode, country, officeCode, salesRepNumber, totalQuantityOrdered)
     SELECT		YEAR(o.orderdate)	as	reportyear,
@@ -179,9 +182,17 @@ BEGIN
 END $$
 DELIMITER ;
 
+DROP EVENT IF EXISTS generate_monthly_quantity_ordered_report;
+CREATE EVENT generate_monthly_quantity_ordered_report 
+ON SCHEDULE EVERY 1 MONTH
+STARTS '2000-01-01 00:00:00'
+DO
+CALL generate_quantity_ordered_report;
+
+DELIMITER ; 
 
 
--- REPORT03 (KRUEGER)
+-- REPORT03
 
 DROP TABLE IF EXISTS turnaroundtime_report;
 CREATE TABLE turnaroundtime_report (
@@ -195,16 +206,13 @@ CREATE TABLE turnaroundtime_report (
 );
 DELIMITER $$
 
-DROP EVENT IF EXISTS generate_turnaroundtime_report;
-DELIMITER $$
-CREATE EVENT generate_turnaroundtime_report 
-ON SCHEDULE EVERY 1 MONTH
-STARTS '2000-01-01 00:00:00'
-DO
+
+DROP PROCEDURE IF EXISTS generate_turnaroundtime_report;
+CREATE PROCEDURE generate_turnaroundtime_report()
 BEGIN
     -- Insert a record into reports_inventory for tracking
     INSERT INTO reports_inventory (generationdate, generatedby, reportdesc)
-    VALUES (NOW(), 'System', CONCAT('Monthly Turnaround Time Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
+    VALUES (NOW(), USER(), CONCAT('Turnaround Time Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
 
     INSERT INTO turnaroundtime_report (reportyear, reportmonth, country, office, AVERAGETURNAROUND)
     SELECT		YEAR(o.orderdate)	as	reportyear,
@@ -225,9 +233,16 @@ BEGIN
 END $$
 DELIMITER ;
 
+DROP EVENT IF EXISTS generate_monthly_turnaroundtime_report;
+CREATE EVENT generate_monthly_turnaroundtime_report 
+ON SCHEDULE EVERY 1 MONTH
+STARTS '2000-01-01 00:00:00'
+DO
+CALL generate_turnaroundtime_report;
 
+DELIMITER;
 
--- REPORT04 (BUERE)
+-- REPORT04 
 
 DROP TABLE IF EXISTS pricing_variation_reports;
 CREATE TABLE  pricing_variation_reports (
@@ -241,15 +256,13 @@ CREATE TABLE  pricing_variation_reports (
 );
 DELIMITER $$
 
-DROP EVENT IF EXISTS generate_pricing_variation_report;
-CREATE EVENT generate_pricing_variation_report
-ON SCHEDULE EVERY 1 MONTH
-STARTS '2000-01-01 00:00:00'
-DO
+
+DROP PROCEDURE IF EXISTS generate_pricing_variation_report;
+CREATE PROCEDURE generate_pricing_variation_report()
 BEGIN
     -- Insert a record into reports_inventory for tracking
     INSERT INTO reports_inventory (generationdate, generatedby, reportdesc)
-    VALUES (NOW(), 'System', CONCAT('Monthly Pricing Variation Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
+    VALUES (NOW(), USER(), CONCAT('Pricing Variation Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
     -- Insert calculated pricing variation data into pricing_variation_reports table
     INSERT INTO pricing_variation_reports (reportyear, reportmonth, product_code, product_line, pricing_variationPercentage)
     SELECT		YEAR(o.orderdate)	as	reportyear,
@@ -270,6 +283,13 @@ BEGIN
 
 END $$
 DELIMITER;
+
+DROP EVENT IF EXISTS generate_monthly_pricing_variation_report;
+CREATE EVENT generate_monthly_pricing_variation_report
+ON SCHEDULE EVERY 1 MONTH
+STARTS '2000-01-01 00:00:00'
+DO
+CALL generate_pricing_variation_report;
 
 -- ORIGINAL SQL
 

@@ -67,26 +67,57 @@ DELIMITER ;
 SELECT * FROM `dbsalesv2.0`.product_pricing;
 UPDATE product_pricing SET startdate='2000-01-01';
 
+DROP TABLE IF EXISTS sales_reports;
+CREATE TABLE monthly_sales_reports (
+    reportyear INT(4),
+    reportmonth INT(2),
+    productCode VARCHAR(15),
+    productLine VARCHAR(50),
+    employeeLastName VARCHAR(50),
+    employeeFirstName VARCHAR(50),
+    country VARCHAR(50),
+    officeCode VARCHAR(10),
+    sales DECIMAL(9,2),
+    discount DECIMAL(9,2),
+    markup DECIMAL(9,2),
+    PRIMARY KEY (reportyear, reportmonth, productCode, officeCode)
+);
+DELIMITER $$
+
 -- REPORT01
-SELECT		YEAR(o.orderdate)	as	reportyear,
-			MONTH(o.orderdate)	as	reportmonth,
-            p.productCode,
-            pp.productLine,
-            e.lastName, e.firstName,
-            ofc.country, ofc.officeCode,
-            ROUND(SUM(od.priceEach*od.quantityOrdered),2)	as	SALES,
-            ROUND(SUM(IF(od.priceEach < getMSRP_2(p.productCode,o.orderdate), getMSRP_2(p.productCode,o.orderdate)-od.priceEach, 0)),2)  AS	DISCOUNT,
-			ROUND(SUM(IF(od.priceEach >= getMSRP_2(p.productCode,o.orderdate), od.priceEach-getMSRP_2(p.productCode,o.orderdate), 0)),2) AS	MARKUP
-FROM		orders o	JOIN	orderdetails od			ON	o.orderNumber=od.orderNumber
-						JOIN	products p				ON	od.productCode=p.productCode
-                        JOIN	product_productlines pp	ON	p.productCode=pp.productCode
-                        JOIN	customers c 			ON	o.customerNumber=c.customerNumber
-                        JOIN	salesrepassignments sa	ON	c.salesRepEmployeeNumber=sa.employeeNumber
-                        JOIN	offices ofc				ON	sa.officeCode=ofc.officeCode
-                        JOIN	salesrepresentatives sr	ON	sa.employeeNumber=sr.employeeNumber
-                        JOIN	employees e				ON	sr.employeeNumber=e.employeeNumber
-WHERE		o.status IN ('Shipped','Completed')
-GROUP BY	reportyear, reportmonth, p.productcode,pp.productline, e.employeeNumber, ofc.officeCode;
+
+CREATE EVENT generate_sales_report 
+ON SCHEDULE EVERY 1 MONTH
+STARTS '2000-01-01 00:00:00'
+DO
+BEGIN
+    -- Insert monthly report data into sales_reports table
+    INSERT INTO sales_reports (reportyear, reportmonth, productCode, productLine, employeeLastName, employeeFirstName, country, officeCode, sales, discount, markup)
+    SELECT		YEAR(o.orderdate)	as	reportyear,
+                MONTH(o.orderdate)	as	reportmonth,
+                p.productCode,
+                pp.productLine,
+                e.lastName, e.firstName,
+                ofc.country, ofc.officeCode,
+                ROUND(SUM(od.priceEach*od.quantityOrdered),2)	as	SALES,
+                ROUND(SUM(IF(od.priceEach < getMSRP_2(p.productCode,o.orderdate), getMSRP_2(p.productCode,o.orderdate)-od.priceEach, 0)),2)  AS	DISCOUNT,
+                ROUND(SUM(IF(od.priceEach >= getMSRP_2(p.productCode,o.orderdate), od.priceEach-getMSRP_2(p.productCode,o.orderdate), 0)),2) AS	MARKUP
+    FROM		orders o	JOIN	orderdetails od			ON	o.orderNumber=od.orderNumber
+                            JOIN	products p				ON	od.productCode=p.productCode
+                            JOIN	product_productlines pp	ON	p.productCode=pp.productCode
+                            JOIN	customers c 			ON	o.customerNumber=c.customerNumber
+                            JOIN	salesrepassignments sa	ON	c.salesRepEmployeeNumber=sa.employeeNumber
+                            JOIN	offices ofc				ON	sa.officeCode=ofc.officeCode
+                            JOIN	salesrepresentatives sr	ON	sa.employeeNumber=sr.employeeNumber
+                            JOIN	employees e				ON	sr.employeeNumber=e.employeeNumber
+    WHERE		o.status IN ('Shipped','Completed')
+    GROUP BY	reportyear, reportmonth, p.productcode,pp.productline, e.employeeNumber, ofc.officeCode;
+
+END $$
+DELIMITER ;
+
+
+
 
 -- REPORT02
 SELECT		YEAR(o.orderdate)	as	reportyear,
@@ -152,3 +183,12 @@ GROUP BY	reportyear, reportmonth, p.productcode,pp.productline;
 
 
 -- ORIGINAL SQL
+
+DROP TABLE IF EXISTS reports_inventory;
+CREATE TABLE reports_inventory (
+	reportid		INT(10)	AUTO_INCREMENT,
+    generationdate	DATETIME,
+    generatedby		VARCHAR(100),
+    reportdesc		VARCHAR(100),
+    PRIMARY KEY (reportid)
+);

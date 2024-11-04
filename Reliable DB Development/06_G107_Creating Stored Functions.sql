@@ -86,7 +86,7 @@ BEGIN
 END $$
 DELIMITER ;
 
--- -- PART 4B.C (PEGALAN)
+-- PART 4B.C (PEGALAN)
 GRANT EXECUTE ON FUNCTION getMSRP TO salesmodule, inventorymodule, paymentmodule;
 
 -- Create a function that checks for the valid values of status
@@ -232,6 +232,8 @@ DELIMITER ;
 
 
 -- PART 4A.F (PEGALAN)
+DROP EVENT IF EXISTS auto_cancel_unshipped_orders;
+DELIMITER $$
 CREATE EVENT auto_cancel_unshipped_orders
 ON SCHEDULE EVERY 1 DAY
 DO

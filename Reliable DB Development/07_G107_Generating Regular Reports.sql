@@ -87,16 +87,17 @@ CREATE TABLE sales_reports (
     employeeFirstName   VARCHAR(50),
     country             VARCHAR(50),
     officeCode          VARCHAR(10),
-    sales               DECIMAL(9,2),
-    discount            DECIMAL(9,2),
-    markup              DECIMAL(9,2),
+    SALES               DECIMAL(9,2),
+    DISCOUNT            DECIMAL(9,2),
+    MARKUP              DECIMAL(9,2),
     PRIMARY KEY (reportid)
 );
-DELIMITER $$
+
 
 -- REPORT01
 
 DROP PROCEDURE IF EXISTS generate_sales_report;
+DELIMITER $$
 CREATE PROCEDURE generate_sales_report()
 BEGIN
     -- Insert a record into reports_inventory for tracking
@@ -104,28 +105,29 @@ BEGIN
     VALUES (NOW(), USER(), CONCAT('Sales Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
     -- Insert monthly report data into sales_reports table
     INSERT INTO sales_reports (reportyear, reportmonth, productCode, productLine, employeeLastName, employeeFirstName, country, officeCode, sales, discount, markup)
-    SELECT		YEAR(o.orderdate)	as	reportyear,
-                MONTH(o.orderdate)	as	reportmonth,
-                p.productCode,
-                pp.productLine,
-                e.lastName, e.firstName,
-                ofc.country, ofc.officeCode,
-                ROUND(SUM(od.priceEach*od.quantityOrdered),2)	as	SALES,
-                ROUND(SUM(IF(od.priceEach < getMSRP_2(p.productCode,o.orderdate), getMSRP_2(p.productCode,o.orderdate)-od.priceEach, 0)),2)  AS	DISCOUNT,
-                ROUND(SUM(IF(od.priceEach >= getMSRP_2(p.productCode,o.orderdate), od.priceEach-getMSRP_2(p.productCode,o.orderdate), 0)),2) AS	MARKUP
-    FROM		orders o	JOIN	orderdetails od			ON	o.orderNumber=od.orderNumber
-                            JOIN	products p				ON	od.productCode=p.productCode
-                            JOIN	product_productlines pp	ON	p.productCode=pp.productCode
-                            JOIN	customers c 			ON	o.customerNumber=c.customerNumber
-                            JOIN	salesrepassignments sa	ON	c.salesRepEmployeeNumber=sa.employeeNumber
-                            JOIN	offices ofc				ON	sa.officeCode=ofc.officeCode
-                            JOIN	salesrepresentatives sr	ON	sa.employeeNumber=sr.employeeNumber
-                            JOIN	employees e				ON	sr.employeeNumber=e.employeeNumber
-    WHERE		o.status IN ('Shipped','Completed')
-    GROUP BY	reportyear, reportmonth, p.productcode,pp.productline, e.employeeNumber, ofc.officeCode;
+	SELECT		YEAR(o.orderdate)	as	reportyear,
+				MONTH(o.orderdate)	as	reportmonth,
+				p.productCode,
+				pp.productLine,
+				e.lastName, e.firstName,
+				ofc.country, ofc.officeCode,
+				ROUND(SUM(od.priceEach*od.quantityOrdered),2)	as	SALES,
+				ROUND(SUM(IF(od.priceEach < getMSRP_2(p.productCode,o.orderdate), getMSRP_2(p.productCode,o.orderdate)-od.priceEach, 0)),2)  AS	DISCOUNT,
+				ROUND(SUM(IF(od.priceEach >= getMSRP_2(p.productCode,o.orderdate), od.priceEach-getMSRP_2(p.productCode,o.orderdate), 0)),2) AS	MARKUP
+	FROM		orders o	JOIN	orderdetails od			ON	o.orderNumber=od.orderNumber
+							JOIN	products p				ON	od.productCode=p.productCode
+							JOIN	product_productlines pp	ON	p.productCode=pp.productCode
+							JOIN	customers c 			ON	o.customerNumber=c.customerNumber
+							JOIN	salesrepassignments sa	ON	c.salesRepEmployeeNumber=sa.employeeNumber
+							JOIN	offices ofc				ON	sa.officeCode=ofc.officeCode
+							JOIN	salesrepresentatives sr	ON	sa.employeeNumber=sr.employeeNumber
+							JOIN	employees e				ON	sr.employeeNumber=e.employeeNumber
+	WHERE		o.`status` IN ('Shipped','Completed')
+	GROUP BY	reportyear, reportmonth, p.productcode,pp.productline, e.employeeNumber, ofc.officeCode;
 
 END $$
 DELIMITER ;
+
 
 DROP EVENT IF EXISTS generate_monthly_sales_report;
 CREATE EVENT generate_monthly_sales_report 
@@ -134,6 +136,14 @@ STARTS '2000-01-01 00:00:00'
 DO
 CALL generate_sales_report();
 DELIMITER ;
+
+
+
+-- CALL generate_sales_report();
+-- SELECT * FROM reports_inventory ORDER BY generationdate DESC LIMIT 1;
+-- SELECT * FROM sales_reports ORDER BY reportid DESC LIMIT 1; ;
+
+
 
 -- REPORT02
 
@@ -201,13 +211,15 @@ DO
 CALL generate_quantity_ordered_report;
 
 
-DELIMITER ; 
+-- CALL generate_quantity_ordered_report;
+-- SELECT * FROM reports_inventory ORDER BY generationdate DESC LIMIT 1;
+-- SELECT * FROM quantity_ordered_reports ORDER BY reportid DESC LIMIT 1;
 
 
 -- REPORT03
 
-DROP TABLE IF EXISTS turnaroundtime_report;
-CREATE TABLE turnaroundtime_report (
+DROP TABLE IF EXISTS turnaroundtime_reports;
+CREATE TABLE turnaroundtime_reports (
     reportid        INT(10) AUTO_INCREMENT,
     reportyear      INT(4),
     reportmonth     INT(2),
@@ -216,17 +228,18 @@ CREATE TABLE turnaroundtime_report (
     AVERAGETURNAROUND  DECIMAL(9,2),
     PRIMARY KEY (reportid)
 );
-DELIMITER $$
 
 
 DROP PROCEDURE IF EXISTS generate_turnaroundtime_report;
+DELIMITER $$
+
 CREATE PROCEDURE generate_turnaroundtime_report()
 BEGIN
     -- Insert a record into reports_inventory for tracking
     INSERT INTO reports_inventory (generationdate, generatedby, reportdesc)
     VALUES (NOW(), USER(), CONCAT('Turnaround Time Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
 
-    INSERT INTO turnaroundtime_report (reportyear, reportmonth, country, office, AVERAGETURNAROUND)
+    INSERT INTO turnaroundtime_reports (reportyear, reportmonth, country, office, AVERAGETURNAROUND)
     SELECT		YEAR(o.orderdate)	as	reportyear,
                 MONTH(o.orderdate)	as	reportmonth,
                 ofc.country, ofc.officeCode,
@@ -252,31 +265,33 @@ STARTS '2000-01-01 00:00:00'
 DO
 CALL generate_turnaroundtime_report;
 
-DELIMITER;
+-- CALL generate_turnaroundtime_report;
+-- SELECT * FROM reports_inventory ORDER BY generationdate DESC LIMIT 1;
+-- SELECT * FROM turnaroundtime_reports ORDER BY reportid DESC LIMIT 1;
 
 -- REPORT04 
 
 DROP TABLE IF EXISTS pricing_variation_reports;
 CREATE TABLE  pricing_variation_reports (
-	reportid						INT(10),
+	reportid						INT(10) AUTO_INCREMENT,
 	reportyear						INT(4),
     reportmonth 					INT(2),
     product_code					VARCHAR(15),
     product_line					VARCHAR(50),
-    pricing_variationPercentage		DECIMAL(9,2),
+    pricevariation					DECIMAL(9,2),
     PRIMARY KEY (reportid)
 );
-DELIMITER $$
-
 
 DROP PROCEDURE IF EXISTS generate_pricing_variation_report;
+DELIMITER $$
+
 CREATE PROCEDURE generate_pricing_variation_report()
 BEGIN
     -- Insert a record into reports_inventory for tracking
     INSERT INTO reports_inventory (generationdate, generatedby, reportdesc)
     VALUES (NOW(), USER(), CONCAT('Pricing Variation Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
     -- Insert calculated pricing variation data into pricing_variation_reports table
-    INSERT INTO pricing_variation_reports (reportyear, reportmonth, product_code, product_line, pricing_variationPercentage)
+    INSERT INTO pricing_variation_reports (reportyear, reportmonth, product_code, product_line, pricevariation)
     SELECT		YEAR(o.orderdate)	as	reportyear,
                 MONTH(o.orderdate)	as	reportmonth,
                 p.productCode,
@@ -294,7 +309,7 @@ BEGIN
     GROUP BY	reportyear, reportmonth, p.productcode,pp.productline;
 
 END $$
-DELIMITER;
+DELIMITER ;
 
 DROP EVENT IF EXISTS generate_monthly_pricing_variation_report;
 CREATE EVENT generate_monthly_pricing_variation_report
@@ -302,6 +317,13 @@ ON SCHEDULE EVERY 1 MONTH
 STARTS '2000-01-01 00:00:00'
 DO
 CALL generate_pricing_variation_report;
+
+-- CALL generate_pricing_variation_report;
+-- SELECT * FROM reports_inventory ORDER BY generationdate DESC LIMIT 1;
+-- SELECT * FROM pricing_variation_reports ORDER BY reportid DESC LIMIT 1;
+
+
+
 
 -- ORIGINAL SQL
 

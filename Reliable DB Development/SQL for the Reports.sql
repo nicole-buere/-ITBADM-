@@ -145,22 +145,22 @@ BEGIN
     -- Insert report data into quantity_ordered_reports table
     INSERT INTO quantity_ordered_reports (reportyear, reportmonth, productLine, productCode, country, officeCode, salesRepNumber, totalQuantityOrdered)
     SELECT		YEAR(o.orderdate)	as	reportyear,
-			MONTH(o.orderdate)	as	reportmonth,
-            p.productCode,
-            pp.productLine,
-            e.lastName, e.firstName,
-            ofc.country, ofc.officeCode,     
-            SUM(od.quantityordered) AS QUANTITYORDERED
-FROM		orders o	JOIN	orderdetails od			ON	o.orderNumber=od.orderNumber
-						JOIN	products p				ON	od.productCode=p.productCode
-                        JOIN	product_productlines pp	ON	p.productCode=pp.productCode
-                        JOIN	customers c 			ON	o.customerNumber=c.customerNumber
-                        JOIN	salesrepassignments sa	ON	c.salesRepEmployeeNumber=sa.employeeNumber
-                        JOIN	offices ofc				ON	sa.officeCode=ofc.officeCode
-                        JOIN	salesrepresentatives sr	ON	sa.employeeNumber=sr.employeeNumber
-                        JOIN	employees e				ON	sr.employeeNumber=e.employeeNumber
-WHERE		o.status IN ('Shipped','Completed')
-GROUP BY	reportyear, reportmonth, p.productcode,pp.productline, e.employeeNumber, ofc.officeCode;
+                MONTH(o.orderdate)	as	reportmonth,
+                p.productCode,
+                pp.productLine,
+                e.lastName, e.firstName,
+                ofc.country, ofc.officeCode,     
+                SUM(od.quantityordered) AS QUANTITYORDERED
+    FROM		orders o	JOIN	orderdetails od			ON	o.orderNumber=od.orderNumber
+                            JOIN	products p				ON	od.productCode=p.productCode
+                            JOIN	product_productlines pp	ON	p.productCode=pp.productCode
+                            JOIN	customers c 			ON	o.customerNumber=c.customerNumber
+                            JOIN	salesrepassignments sa	ON	c.salesRepEmployeeNumber=sa.employeeNumber
+                            JOIN	offices ofc				ON	sa.officeCode=ofc.officeCode
+                            JOIN	salesrepresentatives sr	ON	sa.employeeNumber=sr.employeeNumber
+                            JOIN	employees e				ON	sr.employeeNumber=e.employeeNumber
+    WHERE		o.status IN ('Shipped','Completed')
+    GROUP BY	reportyear, reportmonth, p.productcode,pp.productline, e.employeeNumber, ofc.officeCode;
 
 END $$
 DELIMITER ;
@@ -169,21 +169,45 @@ DELIMITER ;
 
 
 
--- REPORT03
-SELECT		YEAR(o.orderdate)	as	reportyear,
-			MONTH(o.orderdate)	as	reportmonth,
-            ofc.country, ofc.officeCode,
-            AVG(TIMESTAMPDIFF(DAY,o.orderdate,o.shippeddate)) AS	AVERAGETURNAROUND
-FROM		orders o	JOIN	orderdetails od			ON	o.orderNumber=od.orderNumber
-						JOIN	products p				ON	od.productCode=p.productCode
-                        JOIN	product_productlines pp	ON	p.productCode=pp.productCode
-                        JOIN	customers c 			ON	o.customerNumber=c.customerNumber
-                        JOIN	salesrepassignments sa	ON	c.salesRepEmployeeNumber=sa.employeeNumber
-                        JOIN	offices ofc				ON	sa.officeCode=ofc.officeCode
-                        JOIN	salesrepresentatives sr	ON	sa.employeeNumber=sr.employeeNumber
-                        JOIN	employees e				ON	sr.employeeNumber=e.employeeNumber
-WHERE		o.status IN ('Shipped','Completed')
-GROUP BY	reportyear, reportmonth, ofc.officeCode;
+-- REPORT03 (KRUEGER)
+
+DROP TABLE IF EXISTS turnaroundtime_report;
+CREATE TABLE turnaroundtime_report (
+    reportid        INT(10) AUTO_INCREMENT,
+    reportyear      INT(4),
+    reportmonth     INT(2),
+    country         VARCHAR(100),
+    office          VARCHAR(100),
+    AVERAGETURNAROUND  DECIMAL(9,2),
+    PRIMARY KEY (reportid)
+);
+DELIMITER $$
+
+DROP EVENT IF EXISTS generate_turnaroundtime_report;
+DELIMITER $$
+CREATE EVENT generate_turnaroundtime_report 
+ON SCHEDULE EVERY 1 MONTH
+STARTS '2000-01-01 00:00:00'
+DO
+BEGIN
+    INSERT INTO turnaroundtime_report (reportyear, reportmonth, country, office, AVERAGETURNAROUND)
+    SELECT		YEAR(o.orderdate)	as	reportyear,
+                MONTH(o.orderdate)	as	reportmonth,
+                ofc.country, ofc.officeCode,
+                AVG(TIMESTAMPDIFF(DAY,o.orderdate,o.shippeddate)) AS	AVERAGETURNAROUND
+    FROM		orders o	JOIN	orderdetails od			ON	o.orderNumber=od.orderNumber
+                            JOIN	products p				ON	od.productCode=p.productCode
+                            JOIN	product_productlines pp	ON	p.productCode=pp.productCode
+                            JOIN	customers c 			ON	o.customerNumber=c.customerNumber
+                            JOIN	salesrepassignments sa	ON	c.salesRepEmployeeNumber=sa.employeeNumber
+                            JOIN	offices ofc				ON	sa.officeCode=ofc.officeCode
+                            JOIN	salesrepresentatives sr	ON	sa.employeeNumber=sr.employeeNumber
+                            JOIN	employees e				ON	sr.employeeNumber=e.employeeNumber
+    WHERE		o.status IN ('Shipped','Completed')
+    GROUP BY	reportyear, reportmonth, ofc.officeCode;
+
+END $$
+DELIMITER ;
 
 
 

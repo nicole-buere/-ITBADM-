@@ -6,6 +6,14 @@ SELECT * FROM `dbsalesv2.0`.orders;
 -- delete an order (should fail)
 DELETE FROM `dbsalesv2.0`.`orders` WHERE (`orderNumber` = '10427');
 
+-- updated a cancelled order (should fail)
+UPDATE `dbsalesv2.0`.`orders` SET `shippedDate` = '2004-06-17 00:00:00' 
+WHERE `orderNumber` = '10260' AND status = 'Cancelled';
+
+-- cancel an order (should pass)
+UPDATE `dbsalesv2.0`.`orders` SET `status` = 'Cancelled' 
+WHERE (`orderNumber` = '10100');
+
 -- 4C.A test script (TAN)
 
 -- insert an employee record without specifying job title or employee type (should fail)

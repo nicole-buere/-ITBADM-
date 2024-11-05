@@ -185,7 +185,6 @@ DELIMITER ;
 
 DROP TRIGGER IF EXISTS orders_AFTER_UPDATE;
 DELIMITER $$
-
 CREATE TRIGGER `orders_AFTER_UPDATE` AFTER UPDATE ON `orders` FOR EACH ROW 
 BEGIN
     -- Declare the necessary variables
@@ -218,7 +217,7 @@ BEGIN
             SET quantityInStock = quantityInStock + var_quantityOrdered,
 				latest_audituser = USER(),
                 latest_authorizinguser = 'SYSTEM',
-                latest_activityreason = 'Order was cancelled, adding products back into current_products',
+                latest_activityreason = 'Order was cancelled',
                 latest_activitymethod = 'W'
             WHERE productCode = var_productCode;
         END LOOP;

@@ -208,3 +208,17 @@ CREATE TRIGGER orderdetails_BEFORE_DELETE BEFORE DELETE ON orderdetails FOR EACH
 END $$
 DELIMITER ;
 
+-- 4C.D 
+DROP TABLE IF EXISTS audit_salesrepassignments;
+CREATE TABLE audit_salesrepassignments (
+    audit_id INT AUTO_INCREMENT PRIMARY KEY,
+    employeeNumber INT,
+    officeCode INT,
+    startDate DATETIME,
+    endDate DATETIME,
+    quota DECIMAL(10, 2),
+    quota_utilized DECIMAL(10, 2),
+    reassigned_by VARCHAR(50),
+    audit_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    action VARCHAR(50)
+);

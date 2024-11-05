@@ -25,7 +25,7 @@ BEGIN
     SET 
         c.creditLimit = customerOrders.customerTotalAmount * 2;
 
-    -- Additional credit for customers with more than 15 line items in December 2003
+    -- Additional credit for customers with more than 15 distinct orders in December 2003
     UPDATE customers c
     JOIN (
         SELECT 
@@ -41,7 +41,7 @@ BEGIN
         GROUP BY 
             o.customerNumber
         HAVING 
-            COUNT(*) > 15  -- Total line items, not distinct orders
+            COUNT(DISTINCT o.orderNumber) > 15  -- Count distinct orders
     ) AS extraCredit ON c.customerNumber = extraCredit.customerNumber
     SET 
         c.creditLimit = c.creditLimit + extraCredit.maxOrderAmount;

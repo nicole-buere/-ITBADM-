@@ -130,11 +130,12 @@ DELIMITER ;
 
 
 DROP EVENT IF EXISTS generate_monthly_sales_report;
+DELIMITER $$
 CREATE EVENT generate_monthly_sales_report 
-ON SCHEDULE EVERY 1 MONTH
-STARTS '2000-01-01 00:00:00'
-DO
-CALL generate_sales_report();
+	ON SCHEDULE EVERY 1 MONTH
+	STARTS '2000-01-01 00:00:00'
+	DO
+	CALL generate_sales_report();
 DELIMITER ;
 
 
@@ -204,12 +205,14 @@ DELIMITER ;
 
 
 DROP EVENT IF EXISTS generate_monthly_quantity_ordered_report;
+DELIMITER $$
 CREATE EVENT generate_monthly_quantity_ordered_report 
 ON SCHEDULE EVERY 1 MONTH
 STARTS '2000-01-01 00:00:00'
 DO
 CALL generate_quantity_ordered_report;
 
+DELIMITER ;
 
 -- CALL generate_quantity_ordered_report;
 -- SELECT * FROM reports_inventory ORDER BY generationdate DESC LIMIT 1;
@@ -259,11 +262,14 @@ END $$
 DELIMITER ;
 
 DROP EVENT IF EXISTS generate_monthly_turnaroundtime_report;
+DELIMITER $$
+
 CREATE EVENT generate_monthly_turnaroundtime_report 
 ON SCHEDULE EVERY 1 MONTH
 STARTS '2000-01-01 00:00:00'
 DO
 CALL generate_turnaroundtime_report;
+DELIMITER ;
 
 -- CALL generate_turnaroundtime_report;
 -- SELECT * FROM reports_inventory ORDER BY generationdate DESC LIMIT 1;
@@ -312,11 +318,14 @@ END $$
 DELIMITER ;
 
 DROP EVENT IF EXISTS generate_monthly_pricing_variation_report;
+DELIMITER $$
+
 CREATE EVENT generate_monthly_pricing_variation_report
 ON SCHEDULE EVERY 1 MONTH
 STARTS '2000-01-01 00:00:00'
 DO
 CALL generate_pricing_variation_report;
+DELIMITER ;
 
 -- CALL generate_pricing_variation_report;
 -- SELECT * FROM reports_inventory ORDER BY generationdate DESC LIMIT 1;

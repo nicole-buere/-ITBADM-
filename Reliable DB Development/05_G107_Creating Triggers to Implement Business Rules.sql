@@ -355,8 +355,8 @@ END $$
 DELIMITER ;
 
 -- PART 4B.D (BUERE)
-DELIMITER $$
 DROP TRIGGER IF EXISTS `current_product_BEFORE_UPDATE`;
+DELIMITER $$
 CREATE TRIGGER `current_product_BEFORE_UPDATE`BEFORE UPDATE ON `dbsalesV2.0`.`current_products`FOR EACH ROW BEGIN
     DECLARE errormessage VARCHAR(200);
     -- Check if the product type is being modified

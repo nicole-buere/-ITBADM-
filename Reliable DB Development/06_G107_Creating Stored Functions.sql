@@ -308,3 +308,45 @@ BEGIN
 END $$
 DELIMITER ;
 
+-- Part 4C.D
+DROP PROCEDURE IF EXISTS auto_reassign_salesRep
+DELIMITER $$
+CREATE PROCEDURE auto_reassign_salesRep(IN p_employeeNumber INT)
+BEGIN
+    DECLARE v_officeCode INT;
+    DECLARE v_quota DECIMAL(10, 2);
+    DECLARE v_quota_utilized DECIMAL(10, 2);
+
+    -- Retrieve the latest expired assignment for the employee, including office and quota information
+    SELECT officeCode, quota, IFNULL(quota_utilized, 0)
+    INTO v_officeCode, v_quota, v_quota_utilized
+    FROM salesrepassignments
+    WHERE employeeNumber = p_employeeNumber
+      AND endDate = CURDATE()
+    ORDER BY endDate DESC
+    LIMIT 1;
+
+    -- Calculate the new quota by deducting the utilized quota from the previous assignment
+    SET v_quota = v_quota - v_quota_utilized;
+
+    -- Insert a new assignment with adjusted quota and set reassigned_by to "System"
+    INSERT INTO salesrepassignments (
+        employeeNumber,
+        officeCode,
+        startDate,
+        endDate,
+        quota,
+        quota_utilized,
+        reassigned_by 
+    )
+    VALUES (
+        p_employeeNumber,
+        v_officeCode,
+        NOW(),
+        DATE_ADD(NOW(), INTERVAL 1 WEEK),
+        v_quota,       -- Adjusted quota for the new assignment
+        0,             -- Reset quota utilized for the new assignment
+        'System'
+    );
+END$$
+DELIMITER ;

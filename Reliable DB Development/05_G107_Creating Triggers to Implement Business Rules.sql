@@ -237,55 +237,55 @@ CREATE TRIGGER `orders_BEFORE_DELETE` BEFORE DELETE ON `orders` FOR EACH ROW BEG
 END $$
 DELIMITER ;
 
+-- PART 4A.D (KRUEGER)
 DROP TRIGGER IF EXISTS orderdetails_BEFORE_UPDATE;
 DELIMITER $$
+
 CREATE TRIGGER `orderdetails_BEFORE_UPDATE` BEFORE UPDATE ON `orderdetails` FOR EACH ROW
 BEGIN
     DECLARE errormessage VARCHAR(200);
-    DECLARE var_status 		VARCHAR(15);
+    DECLARE var_status VARCHAR(15);
 
-    -- Check if the order is shipped
-    IF isOrderShipped(OLD.orderNumber) THEN
-        SET errormessage = 'No updates are allowed after the order is Shipped.';
+    -- Retrieve the status of the associated order
+    SELECT status INTO var_status
+    FROM orders
+    WHERE orders.orderNumber = OLD.orderNumber;
+
+    -- Condition 1: If the order is "Shipped", allow only referenceNo updates
+    IF var_status = 'Shipped' THEN
+        IF NOT ((NEW.referenceNo <> OLD.referenceNo OR (OLD.referenceNo IS NULL AND NEW.referenceNo IS NOT NULL)) 
+                AND NEW.quantityOrdered = OLD.quantityOrdered 
+                AND NEW.priceEach = OLD.priceEach) THEN
+            SET errormessage = 'No updates are allowed after the order is Shipped, except referenceNo';
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+        END IF;
+    END IF;
+
+    -- Condition 2: If the order is "Cancelled", block all updates
+    IF var_status = "Cancelled" THEN
+        SET errormessage = "Cannot modify the details of a cancelled order";
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
 
-    -- Ensure only quantityOrdered and priceEach are updated
-    IF NOT isUpdateValid(OLD.quantityOrdered, NEW.quantityOrdered, OLD.priceEach, NEW.priceEach) THEN
-        SET errormessage = 'Only quantityOrdered and priceEach can be updated.';
+    -- Condition 3: For other statuses, allow only quantityOrdered and priceEach updates
+    IF var_status NOT IN ('Shipped', 'Cancelled') THEN
+        IF NEW.quantityOrdered = OLD.quantityOrdered AND NEW.priceEach = OLD.priceEach THEN
+            SET errormessage = 'Only quantityOrdered and priceEach can be updated';
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+        END IF;
+    END IF;
+
+    -- Check if the new quantity would cause the inventory to go below zero
+    IF (SELECT quantityInStock + OLD.quantityOrdered - NEW.quantityOrdered FROM current_products WHERE productCode = NEW.productCode) < 0 THEN
+        SET errormessage = CONCAT("The quantity being ordered for ", NEW.productCode, " will make the inventory quantity go below zero");
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
 
-    -- Check if reference number can be updated
-    IF NOT canUpdateReference(OLD.orderNumber, OLD.referenceNo, NEW.referenceNo) THEN
-        SET errormessage = 'Reference number can only be updated when the order status is Shipped.';
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-    END IF;
-
-    -- Check if the associated order is cancelled
-    -- SELECT the status of the order that the orderdetails row is based on
-		SELECT	`status`
-		INTO	var_status
-		FROM	orders
-		WHERE	orders.orderNumber = old.orderNumber;
-        
-	IF(var_status = "Cancelled") THEN
-		SET errormessage = "Cannot modify the details of a cancelled order";
-		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-    END IF;
-    
-    -- Prevent inventory going below zero
-	IF (SELECT quantityInStock + old.quantityOrdered - new.quantityOrdered FROM current_products WHERE productCode = new.productCode) < 0 THEN
-		SET errormessage = CONCAT("The quantity being ordered for ", new.productCode, " will make the inventory quantity go below zero");
-		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-	END IF;
-    
     -- Prevent changing the order line number
-	IF new.orderLineNumber != old.orderLineNumber THEN
-		SET errormessage = "The line number cannot be updated";
-		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-	END IF;
-
+    IF NEW.orderLineNumber != OLD.orderLineNumber THEN
+        SET errormessage = "The line number cannot be updated";
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
 
 END$$
 DELIMITER ;
@@ -378,6 +378,16 @@ CREATE TRIGGER `employees_BEFORE_UPDATE` BEFORE UPDATE ON `employees` FOR EACH R
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
     
+END $$
+DELIMITER ;
+
+-- stop employee records from being deleted
+DROP TRIGGER IF EXISTS employees_BEFORE_DELETE;
+DELIMITER $$
+CREATE TRIGGER `employees_BEFORE_DELETE` BEFORE DELETE ON `employees` FOR EACH ROW BEGIN
+	    DECLARE errormessage VARCHAR(200);
+        SET errormessage = 'Employee records are not to be deleted';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
 END $$
 DELIMITER ;
 

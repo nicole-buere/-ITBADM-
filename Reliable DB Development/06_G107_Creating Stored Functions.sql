@@ -167,8 +167,9 @@ END $$
 DELIMITER ;
 
 -- Testing of Functions
-SELECT isValidStatus("In Process","In Process");
+-- SELECT isValidStatus("In Process","In Process");
 
+-- PART 4A.D (KRUEGER)
 -- Check if an order is shipped
 DROP FUNCTION IF EXISTS isOrderShipped;
 DELIMITER $$
@@ -195,11 +196,12 @@ DELIMITER ;
 -- Check if only quantityOrdered and priceEach are being updated
 DROP FUNCTION IF EXISTS isUpdateValid;
 DELIMITER $$
+
 CREATE FUNCTION isUpdateValid(old_quantity INT, new_quantity INT, old_price DECIMAL(10,2), new_price DECIMAL(10,2))
 RETURNS BOOLEAN
 DETERMINISTIC
 BEGIN
-    -- Allow the update if only quantityOrdered and priceEach are being modified
+    -- Allow the update if either quantityOrdered or priceEach are being modified
     IF old_quantity != new_quantity OR old_price != new_price THEN
         RETURN TRUE;
     ELSE
@@ -208,9 +210,11 @@ BEGIN
 END$$
 DELIMITER ;
 
+
 -- Check if referenceNo can be updated (only if the order is "Shipped")
 DROP FUNCTION IF EXISTS canUpdateReference;
 DELIMITER $$
+
 CREATE FUNCTION canUpdateReference(orderNumber INT, old_ref VARCHAR(20), new_ref VARCHAR(20))
 RETURNS BOOLEAN
 DETERMINISTIC
@@ -317,7 +321,7 @@ BEGIN
     DECLARE v_quota DECIMAL(10, 2);
     DECLARE v_quota_utilized DECIMAL(10, 2);
 
-    -- Retrieve the latest expired assignment for the employee, including office and quota information
+    -- retrieve the latest expired assignment for the employee 
     SELECT officeCode, quota, IFNULL(quota_utilized, 0)
     INTO v_officeCode, v_quota, v_quota_utilized
     FROM salesrepassignments
@@ -326,10 +330,10 @@ BEGIN
     ORDER BY endDate DESC
     LIMIT 1;
 
-    -- Calculate the new quota by deducting the utilized quota from the previous assignment
+    -- calculate the new quota by deducting the utilized quota from the previous assignment
     SET v_quota = v_quota - v_quota_utilized;
 
-    -- Insert a new assignment with adjusted quota and set reassigned_by to "System"
+    -- insert the new assignment into salesrepassignments
     INSERT INTO salesrepassignments (
         employeeNumber,
         officeCode,
@@ -347,6 +351,28 @@ BEGIN
         v_quota,       -- Adjusted quota for the new assignment
         0,             -- Reset quota utilized for the new assignment
         'System'
+    );
+
+    -- log activity in the audit table
+    INSERT INTO audit_salesrepassignments (
+        employeeNumber,
+        officeCode,
+        startDate,
+        endDate,
+        quota,
+        quota_utilized,
+        reassigned_by,
+        action
+    )
+    VALUES (
+        p_employeeNumber,
+        v_officeCode,
+        NOW(),
+        DATE_ADD(NOW(), INTERVAL 7 DAY),
+        v_quota,
+        0,
+        'System',
+        'REASSIGNMENT'
     );
 END$$
 DELIMITER ;

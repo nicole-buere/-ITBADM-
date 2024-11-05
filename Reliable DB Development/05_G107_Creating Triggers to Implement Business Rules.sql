@@ -615,3 +615,38 @@ CREATE TRIGGER before_update_salesrepassignments BEFORE UPDATE ON salesrepassign
     END IF;
 END$$
 DELIMITER ;
+
+-- for auditing current products purposes (TAN)
+DROP TRIGGER IF EXISTS current_products_AFTER_INSERT;
+DELIMITER $$
+CREATE	TRIGGER current_products_AFTER_INSERT AFTER INSERT ON current_products FOR EACH ROW BEGIN
+	INSERT INTO audit_current_products VALUES
+		('C', NOW(), new.productCode, NULL, NULL,
+		  new.product_type, new.quantityInStock,
+          USER(), 
+          new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS current_products_AFTER_UPDATE;
+DELIMITER $$
+CREATE TRIGGER current_products_AFTER_UPDATE AFTER UPDATE ON current_products FOR EACH ROW BEGIN
+INSERT INTO audit_current_products VALUES
+		('U', NOW(), new.productCode, old.product_type, old.quantityInStock,
+		  new.product_type, new.quantityInStock,
+          USER(), 
+          new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS current_products_BEFORE_DELETE;
+DELIMITER $$
+CREATE TRIGGER current_products_BEFORE_DELETE BEFORE DELETE ON current_products FOR EACH ROW BEGIN
+	INSERT INTO audit_current_products VALUES
+		('D', NOW(), old.productCode, NULL, NULL,
+        old.product_type, old.quantityInStock, 
+		USER(), NULL, NULL, NULL, NULL);
+END $$
+DELIMITER ;

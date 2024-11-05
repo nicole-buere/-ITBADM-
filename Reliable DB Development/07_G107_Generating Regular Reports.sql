@@ -133,7 +133,7 @@ DROP EVENT IF EXISTS generate_monthly_sales_report;
 DELIMITER $$
 CREATE EVENT generate_monthly_sales_report 
 	ON SCHEDULE EVERY 1 MONTH
-	STARTS '2000-01-01 00:00:00'
+	STARTS '2024-10-31 00:00:00'
 	DO
 	CALL generate_sales_report();
 DELIMITER ;
@@ -208,7 +208,7 @@ DROP EVENT IF EXISTS generate_monthly_quantity_ordered_report;
 DELIMITER $$
 CREATE EVENT generate_monthly_quantity_ordered_report 
 ON SCHEDULE EVERY 1 MONTH
-STARTS '2000-01-01 00:00:00'
+STARTS '2024-10-31 00:00:00'
 DO
 CALL generate_quantity_ordered_report;
 
@@ -266,7 +266,7 @@ DELIMITER $$
 
 CREATE EVENT generate_monthly_turnaroundtime_report 
 ON SCHEDULE EVERY 1 MONTH
-STARTS '2000-01-01 00:00:00'
+STARTS '2024-10-31 00:00:00'
 DO
 CALL generate_turnaroundtime_report;
 DELIMITER ;
@@ -322,7 +322,7 @@ DELIMITER $$
 
 CREATE EVENT generate_monthly_pricing_variation_report
 ON SCHEDULE EVERY 1 MONTH
-STARTS '2000-01-01 00:00:00'
+STARTS '2024-10-31 00:00:00'
 DO
 CALL generate_pricing_variation_report;
 DELIMITER ;

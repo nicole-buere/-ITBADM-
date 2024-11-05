@@ -437,10 +437,10 @@ DELIMITER $$
 
 CREATE EVENT update_credit_limits
 ON SCHEDULE EVERY 1 MONTH
-STARTS '2024-11-01 00:00:00'
+STARTS '2024-10-31 00:00:00'
 DO
 BEGIN
-    -- Update credit limits based on total order amount for each customer in current month
+    -- Update credit limits based on total order amount for each customer in the current month
     UPDATE customers c
     JOIN (
         SELECT 
@@ -459,26 +459,25 @@ BEGIN
     SET 
         c.creditLimit = customerOrders.customerTotalAmount * 2;
 
-    -- Additional credit for customers with more than 15 distinct orders in current month
+    -- Additional credit for customers with more than 15 orders in the current month
     UPDATE customers c
-    JOIN (
-        SELECT 
-            o.customerNumber, 
-            MAX(od.quantityOrdered * od.priceEach) AS maxOrderAmount
-        FROM 
-            orders o
-        JOIN 
-            orderdetails od ON o.orderNumber = od.orderNumber
-        WHERE 
-            MONTH(o.orderDate) = MONTH(CURDATE())
-            AND YEAR(o.orderDate) = YEAR(CURDATE())
-        GROUP BY 
-            o.customerNumber
-        HAVING 
-            COUNT(DISTINCT o.orderNumber) > 15  -- Count distinct orders
-    ) AS extraCredit ON c.customerNumber = extraCredit.customerNumber
-    SET 
-        c.creditLimit = c.creditLimit + extraCredit.maxOrderAmount;
+    SET c.creditLimit = c.creditLimit + (
+        SELECT MAX(od.quantityOrdered * od.priceEach)
+        FROM orders o
+        JOIN orderdetails od ON o.orderNumber = od.orderNumber
+        WHERE o.customerNumber = c.customerNumber
+        AND MONTH(o.orderDate) = MONTH(CURDATE())
+        AND YEAR(o.orderDate) = YEAR(CURDATE())
+    )
+    WHERE c.customerNumber IN (
+        SELECT o.customerNumber
+        FROM orders o
+        WHERE MONTH(o.orderDate) = MONTH(CURDATE())
+        AND YEAR(o.orderDate) = YEAR(CURDATE())
+        GROUP BY o.customerNumber
+        HAVING COUNT(*) > 15
+    );
 END $$
 
 DELIMITER ;
+

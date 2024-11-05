@@ -225,6 +225,16 @@ BEGIN
         -- Close the cursor after processing
         CLOSE cur;
     END IF;
+    
+	-- for the audit table
+	INSERT INTO audit_orders VALUES
+	('U', NOW(), new.orderNumber, 
+	  old.orderDate, old.requiredDate, old.shippedDate, 
+	  old.`status`, old.comments, old.customerNumber,
+	  new.orderDate, new.requiredDate, new.shippedDate, 
+	  new.`status`, new.comments, new.customerNumber,
+	  USER(), new.latest_audituser, new.latest_authorizinguser,
+	  new.latest_activityreason, new.latest_activitymethod);
 END $$
 DELIMITER ;
 

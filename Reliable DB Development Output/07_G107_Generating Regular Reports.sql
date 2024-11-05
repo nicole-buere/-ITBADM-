@@ -1,5 +1,3 @@
-
-
 DROP TABLE IF EXISTS reports_inventory;
 CREATE TABLE reports_inventory (
 	reportid		INT(10)	AUTO_INCREMENT,
@@ -76,6 +74,8 @@ DELIMITER ;
 
 SELECT * FROM `dbsalesv2.0`.product_pricing;
 UPDATE product_pricing SET startdate='2000-01-01';
+
+-- REPORT 01: Sales, Markups, and Discounts Report
 
 DROP TABLE IF EXISTS sales_reports;
 CREATE TABLE sales_reports (
@@ -170,7 +170,7 @@ DELIMITER ;
 -- SELECT * FROM sales_reports ORDER BY reportid ;
 
 
--- REPORT02
+-- REPORT02: Quantity Ordered Report
 
 DROP TABLE IF EXISTS quantity_ordered_reports;
 CREATE TABLE quantity_ordered_reports (

@@ -432,17 +432,22 @@ DELIMITER ;
 
 -- PART4D (PEGALAN)
 
+ALTER TABLE customers
+ADD COLUMN latest_audituser VARCHAR(45) DEFAULT NULL,
+ADD COLUMN latest_activityreason VARCHAR(100) DEFAULT NULL;
+
+
 DROP EVENT IF EXISTS update_credit_limits;
 DELIMITER $$
 
 CREATE EVENT update_credit_limits
-ON SCHEDULE EVERY 1 MONTH
+ON SCHEDULE EVERY 30 DAY
 STARTS '2024-10-31 00:00:00'
 DO
 BEGIN
     -- Update credit limits based on total order amount for each customer in the current month
     UPDATE customers c
-    JOIN (
+    LEFT JOIN (
         SELECT 
             o.customerNumber, 
             SUM(od.quantityOrdered * od.priceEach) AS customerTotalAmount
@@ -451,33 +456,40 @@ BEGIN
         JOIN 
             orderdetails od ON o.orderNumber = od.orderNumber
         WHERE 
-            MONTH(o.orderDate) = MONTH(CURDATE())
-            AND YEAR(o.orderDate) = YEAR(CURDATE())
+            MONTH(o.orderDate) = 11
+            AND YEAR(o.orderDate) = 2004
         GROUP BY 
             o.customerNumber
     ) AS customerOrders ON c.customerNumber = customerOrders.customerNumber
     SET 
-        c.creditLimit = customerOrders.customerTotalAmount * 2;
+        c.creditLimit = IFNULL(customerOrders.customerTotalAmount * 2, 0),
+        c.latest_audituser = 'System',
+        c.latest_activityreason = 'Monthly reassessment of credit limit';
 
     -- Additional credit for customers with more than 15 orders in the current month
     UPDATE customers c
-    SET c.creditLimit = c.creditLimit + (
-        SELECT MAX(od.quantityOrdered * od.priceEach)
-        FROM orders o
-        JOIN orderdetails od ON o.orderNumber = od.orderNumber
-        WHERE o.customerNumber = c.customerNumber
-        AND MONTH(o.orderDate) = MONTH(CURDATE())
-        AND YEAR(o.orderDate) = YEAR(CURDATE())
-    )
-    WHERE c.customerNumber IN (
-        SELECT o.customerNumber
-        FROM orders o
-        WHERE MONTH(o.orderDate) = MONTH(CURDATE())
-        AND YEAR(o.orderDate) = YEAR(CURDATE())
-        GROUP BY o.customerNumber
+    JOIN (
+        SELECT 
+            o.customerNumber, 
+            MAX(od.quantityOrdered * od.priceEach) AS maxOrderAmount
+        FROM 
+            orders o
+        JOIN 
+            orderdetails od ON o.orderNumber = od.orderNumber
+        WHERE 
+            MONTH(o.orderDate) =11
+            AND YEAR(o.orderDate) = 2004
+        GROUP BY 
+            o.customerNumber
         HAVING COUNT(*) > 15
-    );
-END $$
+    ) AS extraCredit ON c.customerNumber = extraCredit.customerNumber
+    SET 
+        c.creditLimit = c.creditLimit + extraCredit.maxOrderAmount,
+        c.latest_audituser = 'System',
+        c.latest_activityreason = 'Monthly reassessment: additional credit for high order count';
 
+END $$
 DELIMITER ;
+
+
 

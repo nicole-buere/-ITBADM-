@@ -368,72 +368,40 @@ END$$
 DELIMITER ;
 
 -- PART 4B.B (KRUEGER)
--- TRIGGERS FOR PRODUCT CLASSIFICATIONS
-
--- Drop triggers if they already exist to avoid conflicts
-DROP TRIGGER IF EXISTS product_creation_classification;
-DROP TRIGGER IF EXISTS add_productline_classification;
-DROP TRIGGER IF EXISTS delete_productline_classification;
-DROP TRIGGER IF EXISTS remove_classifications_on_product_delete;
-
+DROP PROCEDURE IF EXISTS addProductLine;
 DELIMITER $$
 
--- TRIGGER 1: Automatically classify a product when it is created
-CREATE TRIGGER product_creation_classification
-AFTER INSERT ON products
-FOR EACH ROW
-BEGIN
-    -- Automatically add a default classification (e.g., productLine = 0) for each new product
-    INSERT INTO product_productlines (productCode, productLine)
-    VALUES (NEW.productCode, 0); 
-END $$
-DELIMITER ;
-
--- TRIGGER 2: Before inserting a classification, check that the product exists and avoid duplicate classifications
-DELIMITER $$
-CREATE TRIGGER add_productline_classification
-BEFORE INSERT ON product_productlines
-FOR EACH ROW
+CREATE PROCEDURE `addProductLine`(
+    IN v_productCode VARCHAR(15),
+    IN v_productLine VARCHAR(50)
+)
 BEGIN
     DECLARE errormessage VARCHAR(200);
 
     -- Check if the product exists
-    IF (SELECT COUNT(*) FROM products WHERE productCode = NEW.productCode) = 0 THEN
-        SET errormessage = CONCAT("Cannot classify product: Product with code ", NEW.productCode, " does not exist.");
+    IF (SELECT COUNT(*) FROM products WHERE productCode = v_productCode) = 0 THEN
+        SET errormessage = CONCAT('Product with code ', v_productCode, ' does not exist.');
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
 
-    -- Prevent duplicate classifications for the same product and product line
-    IF (SELECT COUNT(*) FROM product_productlines WHERE productCode = NEW.productCode AND productLine = NEW.productLine) > 0 THEN
-        SET errormessage = CONCAT("Product ", NEW.productCode, " is already classified under line ", NEW.productLine);
+    -- Check if the product line exists
+    IF (SELECT COUNT(*) FROM productlines WHERE productLine = v_productLine) = 0 THEN
+        SET errormessage = CONCAT('Product line ', v_productLine, ' does not exist.');
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
-END $$
-DELIMITER ;
 
--- TRIGGER 3: Prevent classification deletion if the product no longer exists
-DELIMITER $$
-CREATE TRIGGER delete_productline_classification
-BEFORE DELETE ON product_productlines
-FOR EACH ROW
-BEGIN
-    DECLARE errormessage VARCHAR(200);
-
-    -- Verify that the product exists; if not, prevent deletion of classification
-    IF (SELECT COUNT(*) FROM products WHERE productCode = OLD.productCode) = 0 THEN
-        SET errormessage = CONCAT("Cannot delete classification: Product with code ", OLD.productCode, " does not exist.");
+    -- Prevent duplicate classifications
+    IF (SELECT COUNT(*) FROM product_productlines WHERE productCode = v_productCode AND productLine = v_productLine) > 0 THEN
+        SET errormessage = CONCAT('Product ', v_productCode, ' is already classified under line ', v_productLine);
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
-END $$
+
+    -- Insert the product classification
+    INSERT INTO product_productlines (productCode, productLine)
+    VALUES (v_productCode, v_productLine);
+END$$
+
 DELIMITER ;
 
--- TRIGGER 4: Automatically delete classifications if a product is deleted
-DELIMITER $$
-CREATE TRIGGER remove_classifications_on_product_delete
-AFTER DELETE ON products
-FOR EACH ROW
-BEGIN
-    -- Delete all classifications associated with the deleted product
-    DELETE FROM product_productlines WHERE productCode = OLD.productCode;
-END $$
-DELIMITER ;
+-- Testing 4B.b
+CALL addProductLine('S10_1234', 'New ProductLine');

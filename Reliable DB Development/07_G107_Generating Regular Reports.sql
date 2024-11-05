@@ -1,4 +1,5 @@
 
+
 DROP TABLE IF EXISTS reports_inventory;
 CREATE TABLE reports_inventory (
 	reportid		INT(10)	AUTO_INCREMENT,
@@ -78,7 +79,8 @@ UPDATE product_pricing SET startdate='2000-01-01';
 
 DROP TABLE IF EXISTS sales_reports;
 CREATE TABLE sales_reports (
-    reportid            INT(10) AUTO_INCREMENT,
+    entryid             INT(10) AUTO_INCREMENT,  -- Unique identifier for each row
+    reportid            INT(10),                 -- Reference to the reports_inventory table
     reportyear          INT(4),
     reportmonth         INT(2),
     productCode         VARCHAR(15),
@@ -90,40 +92,62 @@ CREATE TABLE sales_reports (
     SALES               DECIMAL(9,2),
     DISCOUNT            DECIMAL(9,2),
     MARKUP              DECIMAL(9,2),
-    PRIMARY KEY (reportid)
+    PRIMARY KEY (entryid),                        -- Use entryid as the primary key
+    FOREIGN KEY (reportid) REFERENCES reports_inventory(reportid)  -- Reference to reports_inventory
 );
 
-
--- REPORT01
 
 DROP PROCEDURE IF EXISTS generate_sales_report;
 DELIMITER $$
 CREATE PROCEDURE generate_sales_report()
 BEGIN
+    DECLARE v_reportid INT;
+
+    -- Get the current year and month
+    DECLARE p_year INT DEFAULT YEAR(CURDATE());
+    DECLARE p_month INT DEFAULT MONTH(CURDATE());
+
+    -- Get the month name from the month number
+    SET @month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
+    
     -- Insert a record into reports_inventory for tracking
     INSERT INTO reports_inventory (generationdate, generatedby, reportdesc)
-    VALUES (NOW(), USER(), CONCAT('Sales Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
-    -- Insert monthly report data into sales_reports table
-    INSERT INTO sales_reports (reportyear, reportmonth, productCode, productLine, employeeLastName, employeeFirstName, country, officeCode, sales, discount, markup)
-	SELECT		YEAR(o.orderdate)	as	reportyear,
-				MONTH(o.orderdate)	as	reportmonth,
-				p.productCode,
-				pp.productLine,
-				e.lastName, e.firstName,
-				ofc.country, ofc.officeCode,
-				ROUND(SUM(od.priceEach*od.quantityOrdered),2)	as	SALES,
-				ROUND(SUM(IF(od.priceEach < getMSRP_2(p.productCode,o.orderdate), getMSRP_2(p.productCode,o.orderdate)-od.priceEach, 0)),2)  AS	DISCOUNT,
-				ROUND(SUM(IF(od.priceEach >= getMSRP_2(p.productCode,o.orderdate), od.priceEach-getMSRP_2(p.productCode,o.orderdate), 0)),2) AS	MARKUP
-	FROM		orders o	JOIN	orderdetails od			ON	o.orderNumber=od.orderNumber
-							JOIN	products p				ON	od.productCode=p.productCode
-							JOIN	product_productlines pp	ON	p.productCode=pp.productCode
-							JOIN	customers c 			ON	o.customerNumber=c.customerNumber
-							JOIN	salesrepassignments sa	ON	c.salesRepEmployeeNumber=sa.employeeNumber
-							JOIN	offices ofc				ON	sa.officeCode=ofc.officeCode
-							JOIN	salesrepresentatives sr	ON	sa.employeeNumber=sr.employeeNumber
-							JOIN	employees e				ON	sr.employeeNumber=e.employeeNumber
-	WHERE		o.`status` IN ('Shipped','Completed')
-	GROUP BY	reportyear, reportmonth, p.productcode,pp.productline, e.employeeNumber, ofc.officeCode;
+    VALUES (NOW(), 'System', CONCAT('Sales Summary Report for ', @month_name, ' ', p_year));
+    
+    -- Capture the reportid that was generated
+    SET v_reportid = LAST_INSERT_ID();
+
+    -- Insert summarized monthly report data into sales_reports table using the same reportid
+    INSERT INTO sales_reports (reportid, reportyear, reportmonth, productCode, productLine, employeeLastName, employeeFirstName, country, officeCode, sales, discount, markup)
+    SELECT  
+        v_reportid AS reportid,
+        p_year AS reportyear,
+        p_month AS reportmonth,
+        p.productCode,
+        pp.productLine,
+        e.lastName,
+        e.firstName,
+        ofc.country,
+        ofc.officeCode,
+        ROUND(SUM(od.priceEach * od.quantityOrdered), 2) AS SALES,
+        ROUND(SUM(IF(od.priceEach < getMSRP_2(p.productCode, o.orderdate), getMSRP_2(p.productCode, o.orderdate) - od.priceEach, 0)), 2) AS DISCOUNT,
+        ROUND(SUM(IF(od.priceEach >= getMSRP_2(p.productCode, o.orderdate), od.priceEach - getMSRP_2(p.productCode, o.orderdate), 0)), 2) AS MARKUP
+    FROM    
+        orders o
+        JOIN orderdetails od ON o.orderNumber = od.orderNumber
+        JOIN products p ON od.productCode = p.productCode
+        JOIN product_productlines pp ON p.productCode = pp.productCode
+        JOIN customers c ON o.customerNumber = c.customerNumber
+        JOIN salesrepassignments sa ON c.salesRepEmployeeNumber = sa.employeeNumber
+        JOIN offices ofc ON sa.officeCode = ofc.officeCode
+        JOIN salesrepresentatives sr ON sa.employeeNumber = sr.employeeNumber
+        JOIN employees e ON sr.employeeNumber = e.employeeNumber
+    WHERE   
+        o.status IN ('Shipped', 'Completed')
+        AND MONTH(o.orderdate) = p_month
+        AND YEAR(o.orderdate) = p_year
+    GROUP BY 
+        p.productCode, pp.productLine, e.employeeNumber, ofc.officeCode, e.lastName, e.firstName, ofc.country, o.orderDate;
 
 END $$
 DELIMITER ;
@@ -131,19 +155,19 @@ DELIMITER ;
 
 DROP EVENT IF EXISTS generate_monthly_sales_report;
 DELIMITER $$
-CREATE EVENT generate_monthly_sales_report 
-	ON SCHEDULE EVERY 1 MONTH
-	STARTS '2024-10-31 00:00:00'
-	DO
-	CALL generate_sales_report();
+CREATE EVENT generate_monthly_sales_report
+ON SCHEDULE EVERY 30 DAY
+STARTS '2024-10-31 00:00:00'
+DO
+BEGIN
+    CALL generate_sales_report();
+END $$
 DELIMITER ;
 
 
-
 -- CALL generate_sales_report();
--- SELECT * FROM reports_inventory ORDER BY generationdate DESC LIMIT 1;
--- SELECT * FROM sales_reports ORDER BY reportid DESC LIMIT 1; ;
-
+-- SELECT * FROM reports_inventory ORDER BY generationdate ;
+-- SELECT * FROM sales_reports ORDER BY reportid ;
 
 
 -- REPORT02

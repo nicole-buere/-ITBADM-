@@ -290,8 +290,8 @@ BEGIN
     DECLARE v_reportid INT;
 
     -- Get the current year and month
-    DECLARE p_year INT DEFAULT 2003;
-    DECLARE p_month INT DEFAULT 12;
+    DECLARE p_year INT DEFAULT YEAR(CURDATE());
+    DECLARE p_month INT DEFAULT MONTH(CURDATE());
 
     -- Get the month name from the month number
     SET @month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
@@ -340,17 +340,20 @@ DELIMITER ;
 -- SELECT * FROM reports_inventory ORDER BY generationdate DESC LIMIT 1;
 -- SELECT * FROM turnaroundtime_reports ORDER BY reportid DESC ;
 
--- REPORT04 
+
+-- REPORT04: Pricing Variation Report
 
 DROP TABLE IF EXISTS pricing_variation_reports;
-CREATE TABLE  pricing_variation_reports (
-	reportid						INT(10) AUTO_INCREMENT,
-	reportyear						INT(4),
-    reportmonth 					INT(2),
-    product_code					VARCHAR(15),
-    product_line					VARCHAR(50),
-    pricevariation					DECIMAL(9,2),
-    PRIMARY KEY (reportid)
+CREATE TABLE pricing_variation_reports (
+    entryid             INT(10) AUTO_INCREMENT,  -- Unique identifier for each row
+    reportid            INT(10),                 -- Reference to the reports_inventory table
+    reportyear          INT(4),
+    reportmonth         INT(2),
+    product_code        VARCHAR(15),
+    product_line        VARCHAR(50),
+    pricevariation      DECIMAL(9,2),
+    PRIMARY KEY (entryid),                       -- Use entryid as the primary key
+    FOREIGN KEY (reportid) REFERENCES reports_inventory(reportid)  -- Reference to reports_inventory
 );
 
 DROP PROCEDURE IF EXISTS generate_pricing_variation_report;
@@ -358,39 +361,51 @@ DELIMITER $$
 
 CREATE PROCEDURE generate_pricing_variation_report()
 BEGIN
+    DECLARE v_reportid INT;
+
+    -- Get the current year and month
+    DECLARE p_year INT DEFAULT YEAR(CURDATE());
+    DECLARE p_month INT DEFAULT MONTH(CURDATE());
+
+    -- Get the month name from the month number
+    SET @month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
+    
     -- Insert a record into reports_inventory for tracking
     INSERT INTO reports_inventory (generationdate, generatedby, reportdesc)
-    VALUES (NOW(), USER(), CONCAT('Pricing Variation Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
-    -- Insert calculated pricing variation data into pricing_variation_reports table
-    INSERT INTO pricing_variation_reports (reportyear, reportmonth, product_code, product_line, pricevariation)
-    SELECT		YEAR(o.orderdate)	as	reportyear,
-                MONTH(o.orderdate)	as	reportmonth,
-                p.productCode,
-                pp.productLine,
-                ROUND(AVG(od.priceeach-getMSRP_2(p.productCode,o.orderdate)),2) as PRICEVARIATION
-    FROM		orders o	JOIN	orderdetails od			ON	o.orderNumber=od.orderNumber
-                            JOIN	products p				ON	od.productCode=p.productCode
-                            JOIN	product_productlines pp	ON	p.productCode=pp.productCode
-                            JOIN	customers c 			ON	o.customerNumber=c.customerNumber
-                            JOIN	salesrepassignments sa	ON	c.salesRepEmployeeNumber=sa.employeeNumber
-                            JOIN	offices ofc				ON	sa.officeCode=ofc.officeCode
-                            JOIN	salesrepresentatives sr	ON	sa.employeeNumber=sr.employeeNumber
-                            JOIN	employees e				ON	sr.employeeNumber=e.employeeNumber
-    WHERE		o.status IN ('Shipped','Completed')
-    GROUP BY	reportyear, reportmonth, p.productcode,pp.productline;
+    VALUES (NOW(), 'System', CONCAT('Pricing Variation Report for ', @month_name, ' ', p_year));
+    
+    -- Capture the reportid that was generated
+    SET v_reportid = LAST_INSERT_ID();
+
+    -- Insert summarized pricing variation data into pricing_variation_reports table using the same reportid
+    INSERT INTO pricing_variation_reports (reportid, reportyear, reportmonth, product_code, product_line, pricevariation)
+    SELECT  
+        v_reportid AS reportid,
+        p_year AS reportyear,
+        p_month AS reportmonth,
+        p.productCode,
+        pp.productLine,
+        ROUND(AVG(od.priceeach - getMSRP_2(p.productCode, o.orderdate)), 2) AS pricevariation
+    FROM    
+        orders o
+        JOIN orderdetails od ON o.orderNumber = od.orderNumber
+        JOIN products p ON od.productCode = p.productCode
+        JOIN product_productlines pp ON p.productCode = pp.productCode
+    WHERE   
+        o.status IN ('Shipped', 'Completed')
+    GROUP BY 
+        p.productCode, pp.productLine;
 
 END $$
 DELIMITER ;
 
-DROP EVENT IF EXISTS generate_monthly_pricing_variation_report;
-DELIMITER $$
-
 CREATE EVENT generate_monthly_pricing_variation_report
-ON SCHEDULE EVERY 1 MONTH
+ON SCHEDULE EVERY 30 DAY
 STARTS '2024-10-31 00:00:00'
 DO
 CALL generate_pricing_variation_report;
 DELIMITER ;
+
 
 -- CALL generate_pricing_variation_report;
 -- SELECT * FROM reports_inventory ORDER BY generationdate DESC LIMIT 1;

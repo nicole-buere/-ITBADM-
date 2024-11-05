@@ -97,8 +97,6 @@ REVOKE SELECT ON `dbsalesV2.0`.`products` FROM salesmodule, inventorymodule, pay
 REVOKE SELECT ON `dbsalesV2.0`.`product_pricing` FROM salesmodule, paymentmodule;
 REVOKE SELECT ON `dbsalesV2.0`.`product_wholesale` FROM salesmodule, inventorymodule, paymentmodule;
 
-GRANT EXECUTE ON FUNCTION getMSRP TO salesmodule, inventorymodule, paymentmodule;
-
 
 
 

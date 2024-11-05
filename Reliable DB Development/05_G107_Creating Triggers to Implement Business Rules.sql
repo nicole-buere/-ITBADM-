@@ -381,6 +381,16 @@ CREATE TRIGGER `employees_BEFORE_UPDATE` BEFORE UPDATE ON `employees` FOR EACH R
 END $$
 DELIMITER ;
 
+-- stop employee records from being deleted
+DROP TRIGGER IF EXISTS employees_BEFORE_DELETE;
+DELIMITER $$
+CREATE TRIGGER `employees_BEFORE_DELETE` BEFORE DELETE ON `employees` FOR EACH ROW BEGIN
+	    DECLARE errormessage VARCHAR(200);
+        SET errormessage = 'Employee records are not to be deleted';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+END $$
+DELIMITER ;
+
 -- PART 4B.D (BUERE)
 DROP TRIGGER IF EXISTS `current_product_BEFORE_UPDATE`;
 DELIMITER $$

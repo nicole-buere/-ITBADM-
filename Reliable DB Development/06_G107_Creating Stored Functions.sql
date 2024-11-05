@@ -250,8 +250,8 @@ END $$
 DELIMITER ;
 
 -- PART 4B.A (BUERE) 
-DELIMITER $$
 DROP PROCEDURE IF EXISTS add_product;
+DELIMITER $$
 CREATE PROCEDURE add_product(
     IN v_productCode VARCHAR(15),
     IN v_productName VARCHAR(70),

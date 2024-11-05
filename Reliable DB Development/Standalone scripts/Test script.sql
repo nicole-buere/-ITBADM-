@@ -1,3 +1,11 @@
+-- 4A.E test script (TAN)
+
+-- select orders
+SELECT * FROM `dbsalesv2.0`.orders;
+
+-- delete an order (should fail)
+DELETE FROM `dbsalesv2.0`.`orders` WHERE (`orderNumber` = '10427');
+
 -- 4C.A test script (TAN)
 
 -- insert an employee record without specifying job title or employee type (should fail)

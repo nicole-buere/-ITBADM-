@@ -249,3 +249,62 @@ END $$
 
 DELIMITER ;
 
+-- PART 4B.A (BUERE) 
+DELIMITER $$
+DROP PROCEDURE IF EXISTS add_product;
+CREATE PROCEDURE add_product(
+    IN v_productCode VARCHAR(15),
+    IN v_productName VARCHAR(70),
+    IN v_productScale VARCHAR(10),
+    IN v_productVendor VARCHAR(50),
+    IN v_productDescription TEXT,
+    IN v_buyPrice DOUBLE,
+    IN v_productType ENUM('R', 'W'),
+    IN v_quantityInStock SMALLINT,
+    IN v_MSRP DECIMAL(9, 2),
+    IN v_productLine VARCHAR(50),
+    IN v_end_username VARCHAR(45),
+    IN v_end_userreason VARCHAR(45)
+)
+BEGIN
+    DECLARE latest_pCode VARCHAR(15);
+    DECLARE end_username VARCHAR(45) DEFAULT 'System';
+    DECLARE end_userreason VARCHAR(45) DEFAULT 'Automated system entry';
+
+    -- check if user input is NULL or empty, and set defaults if so
+    SET end_username = IFNULL(v_end_username, 'System');
+    SET end_userreason = IFNULL(v_end_userreason, 'Automated system entry');
+
+    -- insert into products table and automatically categorize it as a current product ('C')
+    INSERT INTO products (productCode, productName, productScale, productVendor, productDescription, buyPrice, product_category, latest_audituser, latest_activityreason)
+    VALUES (v_productCode, v_productName, v_productScale, v_productVendor, v_productDescription, v_buyPrice, 'C', end_username, end_userreason);
+
+    -- retrieve the latest added product code from audit_products 
+    SELECT productCode INTO latest_pCode
+    FROM audit_products
+    WHERE activity = 'C' 
+    AND activity_timestamp = (SELECT MAX(activity_timestamp) FROM audit_products) 
+    LIMIT 1;
+
+    -- insert product into current_products 
+    INSERT INTO current_products (productCode, product_type, quantityInStock)
+    VALUES (latest_pCode, v_productType, v_quantityInStock);
+
+    -- add created product to either product_retail or product_wholesale, based on its type
+    IF v_productType = 'R' THEN
+        INSERT INTO product_retail (productCode)
+        VALUES (latest_pCode);
+        
+        INSERT INTO product_pricing (productCode, startDate, endDate, MSRP)
+        VALUES (latest_pCode, DATE(NOW()), DATE(DATE_ADD(NOW(), INTERVAL 7 DAY)), v_MSRP);
+    ELSE
+        INSERT INTO product_wholesale (productCode, MSRP)
+        VALUES (latest_pCode, v_MSRP);
+    END IF;
+
+    -- associate the product with a product line in the product_productlines table
+    INSERT INTO product_productlines (productCode, productLine)
+    VALUES (latest_pCode, v_productLine);
+END $$
+DELIMITER ;
+

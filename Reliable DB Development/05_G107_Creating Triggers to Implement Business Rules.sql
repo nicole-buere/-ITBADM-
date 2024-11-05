@@ -429,6 +429,3 @@ BEGIN
 END$$
 
 DELIMITER ;
-
--- Testing 4B.b
-CALL addProductLine('S10_1234', 'New ProductLine');

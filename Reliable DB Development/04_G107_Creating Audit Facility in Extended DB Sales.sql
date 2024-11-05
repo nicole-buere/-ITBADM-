@@ -222,3 +222,28 @@ CREATE TABLE audit_salesrepassignments (
     audit_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     action VARCHAR(50)
 );
+
+-- audit table for current_products (TAN)
+DROP TABLE IF EXISTS audit_current_products;
+CREATE TABLE audit_current_products (
+  activity 					enum('C','U','D') 	DEFAULT NULL,
+  activity_timestamp		datetime 			NOT NULL,
+  productCode 				varchar(15) 		NOT NULL,
+  old_product_type 			enum('R','W') 		DEFAULT NULL,
+  old_quantityInStock		smallInt 			DEFAULT NULL,
+  new_product_type 			enum('R','W') 		DEFAULT NULL,
+  new_quantityInStock		smallInt			DEFAULT NULL,
+  dbuser 					varchar(45)	 		DEFAULT NULL,
+  latest_audituser 			varchar(45) 		DEFAULT NULL,
+  latest_authorizinguser	varchar(45) 		DEFAULT NULL,
+  latest_activityreason	 	varchar(45) 		DEFAULT NULL,
+  latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
+  PRIMARY KEY (productCode,activity_timestamp)
+);
+
+-- alter current products to include columns used for audit
+ALTER TABLE current_products
+  ADD COLUMN latest_audituser 			varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_authorizinguser 	varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activityreason 		varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activitymethod 		enum('W','M','D') DEFAULT NULL;

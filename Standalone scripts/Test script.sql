@@ -3,6 +3,9 @@
 -- select orders
 SELECT * FROM `dbsalesv2.0`.orders;
 
+-- select current products
+SELECT * FROM `dbsalesv2.0`.current_products;
+
 -- delete an order (should fail)
 DELETE FROM `dbsalesv2.0`.`orders` WHERE (`orderNumber` = '10427');
 
@@ -12,7 +15,7 @@ WHERE `orderNumber` = '10260' AND status = 'Cancelled';
 
 -- cancel an order (should pass)
 UPDATE `dbsalesv2.0`.`orders` SET `status` = 'Cancelled' 
-WHERE (`orderNumber` = '10100');
+WHERE (`orderNumber` = '10101');
 
 -- 4C.A test script (TAN)
 
@@ -54,3 +57,26 @@ WHERE (`employeeNumber` = '9999');
 -- delete an employee record (should fail)
 DELETE FROM `dbsalesv2.0`.`employees` 
 WHERE (`employeeNumber` = '9999');
+
+-- 4B.E test script (TAN)
+
+-- select
+SELECT * FROM `dbsalesv2.0`.discontinued_products;
+
+SELECT * FROM `dbsalesv2.0`.current_products;
+
+SELECT * FROM `dbsalesv2.0`.products;
+
+-- insert an inventory manager
+INSERT INTO `dbsalesv2.0`.`inventory_managers` (`employeeNumber`) 
+VALUES ('1002');
+
+-- discontinue a product
+UPDATE `dbsalesv2.0`.`products` SET `product_category` = 'D' 
+WHERE (`productCode` = 'S10_1678');
+
+-- re-continue a product
+UPDATE `dbsalesv2.0`.`products` SET `product_category` = 'C' 
+WHERE (`productCode` = 'S10_1678');
+
+

@@ -663,3 +663,47 @@ CREATE TRIGGER current_products_BEFORE_DELETE BEFORE DELETE ON current_products 
 		USER(), NULL, NULL, NULL, NULL);
 END $$
 DELIMITER ;
+
+-- create new column in discontinued products 'quantityLeft'
+ALTER TABLE `dbsalesv2.0`.`discontinued_products` 
+ADD COLUMN `quantityLeft` SMALLINT NULL AFTER `inventory_manager`;
+
+-- PART 4B.E (TAN)
+--  for checking if a product is being recontinued 
+DROP TRIGGER IF EXISTS products_BEFORE_UPDATE;
+DELIMITER $$
+CREATE TRIGGER `products_BEFORE_UPDATE` BEFORE UPDATE ON `products` FOR EACH ROW BEGIN
+    
+    DECLARE current_stock INT;
+    
+    -- if the product is being recontinued
+	IF(new.product_category = 'C') THEN
+		-- delete rows from discontinued_products that match the productCode
+		DELETE FROM discontinued_products
+		WHERE productCode = new.productCode;
+        
+        -- if there are 0 rows with matching product code to the product being continued
+        IF((SELECT COUNT(DISTINCT productCode) FROM current_products
+			WHERE productCode = new.productCode) = 0) THEN
+            -- insert a new row into current product based on the product
+			INSERT INTO current_products VALUES (new.productCode, NULL, 0);
+			
+        END IF;
+
+    END IF;
+
+	-- if the product is being discontinued
+	IF(new.product_category = 'D') THEN
+		SELECT quantityInStock INTO current_stock
+		FROM current_products
+		WHERE productCode = new.productCode;
+		
+		INSERT INTO `dbsalesv2.0`.`discontinued_products` (`productCode`, `reason`, `inventory_manager`, `quantityLeft`) 
+        VALUES (new.productCode, 'test', '1002', current_stock);
+        
+        -- move the quantity of quantity in stock to discontinued products
+        UPDATE `dbsalesv2.0`.`current_products` SET `quantityInStock` = '0' 
+        WHERE (`productCode` = new.productCode);
+    END IF;
+END $$
+DELIMITER ;

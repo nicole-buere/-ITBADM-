@@ -267,53 +267,70 @@ DELIMITER ;
 -- SELECT * FROM quantity_ordered_reports ORDER BY reportid;
 
 
--- REPORT03
+-- REPORT03: Turnaround Time Report
 
 DROP TABLE IF EXISTS turnaroundtime_reports;
 CREATE TABLE turnaroundtime_reports (
-    reportid        INT(10) AUTO_INCREMENT,
-    reportyear      INT(4),
-    reportmonth     INT(2),
-    country         VARCHAR(100),
-    office          VARCHAR(100),
-    AVERAGETURNAROUND  DECIMAL(9,2),
-    PRIMARY KEY (reportid)
+    entryid             INT(10) AUTO_INCREMENT,  -- Unique identifier for each row
+    reportid            INT(10),                 -- Reference to the reports_inventory table
+    reportyear          INT(4),
+    reportmonth         INT(2),
+    country             VARCHAR(100),
+    office              VARCHAR(100),
+    AVERAGETURNAROUND   DECIMAL(9,2),
+    PRIMARY KEY (entryid),                       -- Use entryid as the primary key
+    FOREIGN KEY (reportid) REFERENCES reports_inventory(reportid)  -- Reference to reports_inventory
 );
-
 
 DROP PROCEDURE IF EXISTS generate_turnaroundtime_report;
 DELIMITER $$
 
 CREATE PROCEDURE generate_turnaroundtime_report()
 BEGIN
+    DECLARE v_reportid INT;
+
+    -- Get the current year and month
+    DECLARE p_year INT DEFAULT 2003;
+    DECLARE p_month INT DEFAULT 12;
+
+    -- Get the month name from the month number
+    SET @month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
+    
     -- Insert a record into reports_inventory for tracking
     INSERT INTO reports_inventory (generationdate, generatedby, reportdesc)
-    VALUES (NOW(), USER(), CONCAT('Turnaround Time Report for ', MONTHNAME(NOW()), ' ', YEAR(NOW())));
+    VALUES (NOW(), 'System', CONCAT('Turnaround Time Report for ', @month_name, ' ', p_year));
+    
+    -- Capture the reportid that was generated
+    SET v_reportid = LAST_INSERT_ID();
 
-    INSERT INTO turnaroundtime_reports (reportyear, reportmonth, country, office, AVERAGETURNAROUND)
-    SELECT		YEAR(o.orderdate)	as	reportyear,
-                MONTH(o.orderdate)	as	reportmonth,
-                ofc.country, ofc.officeCode,
-                AVG(TIMESTAMPDIFF(DAY,o.orderdate,o.shippeddate)) AS	AVERAGETURNAROUND
-    FROM		orders o	JOIN	orderdetails od			ON	o.orderNumber=od.orderNumber
-                            JOIN	products p				ON	od.productCode=p.productCode
-                            JOIN	product_productlines pp	ON	p.productCode=pp.productCode
-                            JOIN	customers c 			ON	o.customerNumber=c.customerNumber
-                            JOIN	salesrepassignments sa	ON	c.salesRepEmployeeNumber=sa.employeeNumber
-                            JOIN	offices ofc				ON	sa.officeCode=ofc.officeCode
-                            JOIN	salesrepresentatives sr	ON	sa.employeeNumber=sr.employeeNumber
-                            JOIN	employees e				ON	sr.employeeNumber=e.employeeNumber
-    WHERE		o.status IN ('Shipped','Completed')
-    GROUP BY	reportyear, reportmonth, ofc.officeCode;
+    -- Insert summarized turnaround time report data into turnaroundtime_reports table using the same reportid
+    INSERT INTO turnaroundtime_reports (reportid, reportyear, reportmonth, country, office, AVERAGETURNAROUND)
+    SELECT  
+        v_reportid AS reportid,
+        p_year AS reportyear,
+        p_month AS reportmonth,
+        ofc.country,
+        ofc.officeCode AS office,
+        AVG(TIMESTAMPDIFF(DAY, o.orderdate, o.shippeddate)) AS AVERAGETURNAROUND
+    FROM    
+        orders o
+        JOIN customers c ON o.customerNumber = c.customerNumber
+        JOIN salesrepassignments sa ON c.salesRepEmployeeNumber = sa.employeeNumber
+        JOIN offices ofc ON sa.officeCode = ofc.officeCode
+    WHERE   
+        o.status IN ('Shipped', 'Completed')
+    GROUP BY 
+        ofc.country, ofc.officeCode;
 
 END $$
 DELIMITER ;
+
 
 DROP EVENT IF EXISTS generate_monthly_turnaroundtime_report;
 DELIMITER $$
 
 CREATE EVENT generate_monthly_turnaroundtime_report 
-ON SCHEDULE EVERY 1 MONTH
+ON SCHEDULE EVERY 30 DAY
 STARTS '2024-10-31 00:00:00'
 DO
 CALL generate_turnaroundtime_report;
@@ -321,7 +338,7 @@ DELIMITER ;
 
 -- CALL generate_turnaroundtime_report;
 -- SELECT * FROM reports_inventory ORDER BY generationdate DESC LIMIT 1;
--- SELECT * FROM turnaroundtime_reports ORDER BY reportid DESC LIMIT 1;
+-- SELECT * FROM turnaroundtime_reports ORDER BY reportid DESC ;
 
 -- REPORT04 
 

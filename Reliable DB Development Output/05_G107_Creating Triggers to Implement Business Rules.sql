@@ -678,6 +678,15 @@ CREATE TRIGGER `products_BEFORE_UPDATE` BEFORE UPDATE ON `products` FOR EACH ROW
     
     -- if the product is being recontinued
 	IF(new.product_category = 'C') THEN
+		SELECT quantityLeft INTO current_stock
+		FROM discontinued_products
+		WHERE productCode = new.productCode;
+            
+		-- update the stock of the newly continued product
+		UPDATE `dbsalesv2.0`.`current_products` SET `quantityInStock` = current_stock
+        WHERE (`productCode` = new.productCode);
+
+        
 		-- delete rows from discontinued_products that match the productCode
 		DELETE FROM discontinued_products
 		WHERE productCode = new.productCode;

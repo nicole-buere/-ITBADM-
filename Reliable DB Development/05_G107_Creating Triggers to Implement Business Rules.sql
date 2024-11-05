@@ -456,8 +456,8 @@ BEGIN
         JOIN 
             orderdetails od ON o.orderNumber = od.orderNumber
         WHERE 
-            MONTH(o.orderDate) = 11
-            AND YEAR(o.orderDate) = 2004
+            MONTH(o.orderDate) = MONTH(CURDATE())
+            AND YEAR(o.orderDate) = YEAR(CURDATE())
         GROUP BY 
             o.customerNumber
     ) AS customerOrders ON c.customerNumber = customerOrders.customerNumber
@@ -477,8 +477,8 @@ BEGIN
         JOIN 
             orderdetails od ON o.orderNumber = od.orderNumber
         WHERE 
-            MONTH(o.orderDate) =11
-            AND YEAR(o.orderDate) = 2004
+            MONTH(o.orderDate) = MONTH(CURDATE())
+            AND YEAR(o.orderDate) = YEAR(CURDATE())
         GROUP BY 
             o.customerNumber
         HAVING COUNT(*) > 15

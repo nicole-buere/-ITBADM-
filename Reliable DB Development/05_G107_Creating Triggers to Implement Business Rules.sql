@@ -491,5 +491,69 @@ BEGIN
 END $$
 DELIMITER ;
 
+-- PART 4C.D
+-- Part 4C.D
+ALTER TABLE salesrepassignments
+ADD COLUMN quota_utilized DECIMAL(10, 2) DEFAULT 0,
+ADD COLUMN reassigned_by VARCHAR(50) DEFAULT NULL;
 
+DROP EVENT IF EXISTS reassign_sales_rep;
+DELIMITER $$
+CREATE EVENT reassign_sales_rep
+ON SCHEDULE EVERY 1 DAY
+STARTS '2024-11-05 18:00:00'
+DO
+BEGIN
+    DECLARE v_employeeNumber INT;
 
+    -- Log start of event
+    INSERT INTO event_logs (log_time, message) VALUES (NOW(), 'Event reassign_sales_rep started.');
+
+    -- Temporary table to store employees with expiring assignments
+    CREATE TEMPORARY TABLE IF NOT EXISTS no_reassignment_table (
+        employeeNumber INT
+    );
+
+    -- Insert employees with assignments expiring today and no future assignment
+    INSERT INTO no_reassignment_table (employeeNumber)
+    SELECT employeeNumber
+    FROM salesrepassignments sra1
+    WHERE endDate = CURDATE()
+      AND NOT EXISTS (
+          SELECT 1
+          FROM salesrepassignments sra2
+          WHERE sra2.employeeNumber = sra1.employeeNumber
+            AND sra2.officeCode = sra1.officeCode
+            AND sra2.startDate > CURDATE()
+      );
+
+    -- Log count of employees to be reassigned
+    INSERT INTO event_logs (log_time, message)
+    VALUES (NOW(), CONCAT('Employees to reassign: ', (SELECT COUNT(*) FROM no_reassignment_table)));
+
+    -- Loop through each employee in the temporary table
+    WHILE (SELECT COUNT(*) FROM no_reassignment_table) > 0 DO
+        -- Get the next employee number
+        SELECT employeeNumber INTO v_employeeNumber
+        FROM no_reassignment_table
+        LIMIT 1;
+
+        -- Log each reassignment attempt
+        INSERT INTO event_logs (log_time, message)
+        VALUES (NOW(), CONCAT('Reassigning employee: ', v_employeeNumber));
+
+        -- Call the reassign procedure for this employee
+        CALL auto_reassign_salesRep(v_employeeNumber);
+
+        -- Delete the processed employee from the temporary table
+        DELETE FROM no_reassignment_table
+        WHERE employeeNumber = v_employeeNumber;
+    END WHILE;
+
+    -- Drop the temporary table
+    DROP TEMPORARY TABLE IF EXISTS no_reassignment_table;
+
+    -- Log end of event
+    INSERT INTO event_logs (log_time, message) VALUES (NOW(), 'Event reassign_sales_rep finished.');
+END$$
+DELIMITER ;

@@ -716,3 +716,38 @@ CREATE TRIGGER `products_BEFORE_UPDATE` BEFORE UPDATE ON `products` FOR EACH ROW
     END IF;
 END $$
 DELIMITER ;
+
+-- audit table necessary triggers for discontinued_products
+DROP TRIGGER IF EXISTS discontinued_products_AFTER_INSERT;
+DELIMITER $$
+CREATE	TRIGGER discontinued_products_AFTER_INSERT AFTER INSERT ON discontinued_products FOR EACH ROW BEGIN
+	INSERT INTO audit_discontinued_products VALUES
+		('C', NOW(), new.productCode, NULL, NULL, NULL,
+		  new.reason, new.inventoryManager, new.quantityLeft,
+          USER(), 
+          new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS discontinued_products_AFTER_UPDATE;
+DELIMITER $$
+CREATE TRIGGER discontinued_products_AFTER_UPDATE AFTER UPDATE ON discontinued_products FOR EACH ROW BEGIN
+	INSERT INTO audit_discontinued_products VALUES
+		('U', NOW(), new.productCode, new.reason, new.inventoryManager, new.quantityLeft,
+		  old.reason, old.inventoryManager, old.quantityLeft,
+          USER(), 
+          new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS discontinued_products_BEFORE_DELETE;
+DELIMITER $$
+CREATE TRIGGER discontinued_products_BEFORE_DELETE BEFORE DELETE ON discontinued_products FOR EACH ROW BEGIN
+	INSERT INTO audit_discontinued_products VALUES
+		('D', NOW(), old.productCode, NULL, NULL, NULL,
+        old.reason, old.inventoryManager, old.quantityLeft,
+		USER(), NULL, NULL, NULL, NULL);
+END $$
+DELIMITER ;

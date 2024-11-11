@@ -248,9 +248,11 @@ CREATE TABLE audit_discontinued_products (
   activity_timestamp		datetime 			NOT NULL,
   productCode 				varchar(15) 		NOT NULL,
   old_reason				varchar(45)			DEFAULT NULL,
-  new_reason				varchar(45)			DEFAULT NULL,
   old_inventory_manager		int					DEFAULT NULL,
+  old_quantityLeft			smallint			DEFAULT NULL,
+  new_reason				varchar(45)			DEFAULT NULL,
   new_inventory_manager		int					DEFAULT NULL,
+  new_quantityLeft			smallint			DEFAULT NULL,
   dbuser 					varchar(45)	 		DEFAULT NULL,
   latest_audituser 			varchar(45) 		DEFAULT NULL,
   latest_authorizinguser	varchar(45) 		DEFAULT NULL,
@@ -261,6 +263,13 @@ CREATE TABLE audit_discontinued_products (
 
 -- alter current products to include columns used for audit
 ALTER TABLE current_products
+  ADD COLUMN latest_audituser 			varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_authorizinguser 	varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activityreason 		varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activitymethod 		enum('W','M','D') DEFAULT NULL;
+
+-- alter discontinued products to include columns used for audit
+ALTER TABLE discontinued_products
   ADD COLUMN latest_audituser 			varchar(45) DEFAULT NULL,
   ADD COLUMN latest_authorizinguser 	varchar(45) DEFAULT NULL,
   ADD COLUMN latest_activityreason 		varchar(45) DEFAULT NULL,

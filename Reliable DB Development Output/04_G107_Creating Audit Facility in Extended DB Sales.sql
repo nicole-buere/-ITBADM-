@@ -241,6 +241,24 @@ CREATE TABLE audit_current_products (
   PRIMARY KEY (productCode,activity_timestamp)
 );
 
+-- audit table for discontinued_products (TAN)
+DROP TABLE IF EXISTS audit_discontinued_products;
+CREATE TABLE audit_discontinued_products (
+  activity 					enum('C','U','D') 	DEFAULT NULL,
+  activity_timestamp		datetime 			NOT NULL,
+  productCode 				varchar(15) 		NOT NULL,
+  old_reason				varchar(45)			DEFAULT NULL,
+  new_reason				varchar(45)			DEFAULT NULL,
+  old_inventory_manager		int					DEFAULT NULL,
+  new_inventory_manager		int					DEFAULT NULL,
+  dbuser 					varchar(45)	 		DEFAULT NULL,
+  latest_audituser 			varchar(45) 		DEFAULT NULL,
+  latest_authorizinguser	varchar(45) 		DEFAULT NULL,
+  latest_activityreason	 	varchar(45) 		DEFAULT NULL,
+  latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
+  PRIMARY KEY (productCode,activity_timestamp)
+);
+
 -- alter current products to include columns used for audit
 ALTER TABLE current_products
   ADD COLUMN latest_audituser 			varchar(45) DEFAULT NULL,

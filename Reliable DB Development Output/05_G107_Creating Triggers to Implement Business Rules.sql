@@ -646,19 +646,26 @@ DELIMITER ;
 DROP TRIGGER IF EXISTS current_products_BEFORE_UPDATE;
 DELIMITER $$
 CREATE TRIGGER current_products_BEFORE_UPDATE BEFORE UPDATE ON current_products FOR EACH ROW BEGIN
+	DECLARE errormessage	VARCHAR(200);
+
+	-- if there the current_product is attempting to be moved to discontinued but there is no discontinuing_manager
+	IF(old.current_status = 'C' AND new.current_status = 'D' AND new.discontinuing_manager IS NULL) THEN
+		SET errormessage = CONCAT("The current product ", new.productCode, " needs a inventory manager to discontinue it");
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+	END IF;
 
 	-- if the new status is 'D' and the old one is 'C' and there is a discontiuing_manager in current_products row
 	IF(old.current_status = 'C' AND new.current_status = 'D' AND new.discontinuing_manager IS NOT NULL) THEN
 		-- if there are no entries in the discontinued products table that correspond to this current_product
 		IF (SELECT COUNT(*) FROM discontinued_products WHERE productCode = new.productCode) = 0 THEN
 			INSERT INTO discontinued_products VALUES
-            (new.productCode, new.discontinue_reason, new.discontinuing_manager, 'SYSTEM', 'SYSTEM', 'Product was set as discontinued in the current products table', 'D');
+            (new.productCode, new.discontinue_reason, new.discontinuing_manager, 'SYSTEM', 'SYSTEM', 'Product being discontinued', 'D');
             
 		END IF;
         
 			UPDATE products
 				SET product_category = 'D', latest_audituser = 'SYSTEM', latest_authorizinguser = 'SYSTEM', 
-					latest_activityreason = 'Product was set as discontinued in the current products table',
+					latest_activityreason = 'Product being discontinued',
 					latest_activitymethod = 'D'
 			WHERE productCode = new.productCode;
         
@@ -669,9 +676,13 @@ CREATE TRIGGER current_products_BEFORE_UPDATE BEFORE UPDATE ON current_products 
 		DELETE FROM discontinued_products
         WHERE productCode = new.productCode;
         
+		UPDATE current_products
+			SET discontinuing_manager = NULL, discontinue_reason = NULL
+		WHERE productCode = new.productCode;
+        
 		UPDATE products
-			SET product_category = 'C', latest_audituser = 'SYSTEM', latest_authorizinguser = 'SYSTEM', 
-				latest_activityreason = 'Product was set as current in the current products table',
+			SET product_category = 'C', latest_audituser = 'SYSTEM', latest_authorizinguser = 'SYSTEM',
+				latest_activityreason = 'Product being re-continued',
 				latest_activitymethod = 'D'
 		WHERE productCode = new.productCode;
 	END IF;

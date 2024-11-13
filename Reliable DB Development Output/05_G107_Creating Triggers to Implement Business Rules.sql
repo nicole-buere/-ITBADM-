@@ -653,13 +653,27 @@ CREATE TRIGGER current_products_BEFORE_UPDATE BEFORE UPDATE ON current_products 
 		IF (SELECT COUNT(*) FROM discontinued_products WHERE productCode = new.productCode) = 0 THEN
 			INSERT INTO discontinued_products VALUES
             (new.productCode, new.discontinue_reason, new.discontinuing_manager, 'SYSTEM', 'SYSTEM', 'Product was set as discontinued in the current products table', 'D');
+            
 		END IF;
+        
+			UPDATE products
+				SET product_category = 'D', latest_audituser = 'SYSTEM', latest_authorizinguser = 'SYSTEM', 
+					latest_activityreason = 'Product was set as discontinued in the current products table',
+					latest_activitymethod = 'D'
+			WHERE productCode = new.productCode;
+        
 	END IF;
     
 	-- if the new status is 'C' and the old one is 'D'
 	IF(old.current_status = 'D' AND new.current_status = 'C') THEN
 		DELETE FROM discontinued_products
         WHERE productCode = new.productCode;
+        
+		UPDATE products
+			SET product_category = 'C', latest_audituser = 'SYSTEM', latest_authorizinguser = 'SYSTEM', 
+				latest_activityreason = 'Product was set as current in the current products table',
+				latest_activitymethod = 'D'
+		WHERE productCode = new.productCode;
 	END IF;
 
 END $$
@@ -684,56 +698,6 @@ CREATE TRIGGER current_products_BEFORE_DELETE BEFORE DELETE ON current_products 
 		('D', NOW(), old.productCode, NULL, NULL, NULL, NULL, NULL,
         old.product_type, old.quantityInStock, old.current_status, old.discontinuing_manager, old.discontinue_reason,
 		USER(), NULL, NULL, NULL, NULL);
-END $$
-DELIMITER ;
-
--- PART 4B.E (TAN)
---  for checking if a product is being recontinued 
-DROP TRIGGER IF EXISTS products_BEFORE_UPDATE;
-DELIMITER $$
-CREATE TRIGGER `products_BEFORE_UPDATE` BEFORE UPDATE ON `products` FOR EACH ROW BEGIN
-    /*The below trigger details are no longer used
-    
-    DECLARE current_stock INT;
-    
-    -- if the product is being recontinued
-	IF(new.product_category = 'C') THEN
-		SELECT quantityLeft INTO current_stock
-		FROM discontinued_products
-		WHERE productCode = new.productCode;
-            
-		-- update the stock of the newly continued product
-		UPDATE `dbsalesv2.0`.`current_products` SET `quantityInStock` = current_stock
-        WHERE (`productCode` = new.productCode);
-
-        
-		-- delete rows from discontinued_products that match the productCode
-		DELETE FROM discontinued_products
-		WHERE productCode = new.productCode;
-        
-        -- if there are 0 rows with matching product code to the product being continued
-        IF((SELECT COUNT(DISTINCT productCode) FROM current_products
-			WHERE productCode = new.productCode) = 0) THEN
-            -- insert a new row into current product based on the product
-			INSERT INTO current_products VALUES (new.productCode, NULL, 0);
-			
-        END IF;
-
-    END IF;
-
-	-- if the product is being discontinued
-	IF(new.product_category = 'D') THEN
-		SELECT quantityInStock INTO current_stock
-		FROM current_products
-		WHERE productCode = new.productCode;
-		
-		INSERT INTO `dbsalesv2.0`.`discontinued_products` (`productCode`, `reason`, `inventory_manager`, `quantityLeft`) 
-        VALUES (new.productCode, 'test', '1002', current_stock);
-        
-        -- move the quantity of quantity in stock to discontinued products
-        UPDATE `dbsalesv2.0`.`current_products` SET `quantityInStock` = '0' 
-        WHERE (`productCode` = new.productCode);
-    END IF;*/
 END $$
 DELIMITER ;
 

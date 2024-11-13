@@ -642,6 +642,29 @@ CREATE	TRIGGER current_products_AFTER_INSERT AFTER INSERT ON current_products FO
 END $$
 DELIMITER ;
 
+-- for adding or deleting things in discontinued_products based on updates to current_status (for 4b.e, by TAN)
+DROP TRIGGER IF EXISTS current_products_BEFORE_UPDATE;
+DELIMITER $$
+CREATE TRIGGER current_products_BEFORE_UPDATE BEFORE UPDATE ON current_products FOR EACH ROW BEGIN
+
+	-- if the new status is 'D' and the old one is 'C' and there is a discontiuing_manager in current_products row
+	IF(old.current_status = 'C' AND new.current_status = 'D' AND new.discontiuing_manager IS NOT NULL) THEN
+		-- if there are no entries in the discontinued products table that correspond to this current_product
+		IF (SELECT COUNT(*) FROM discontinued_products WHERE productCode = new.productCode) = 0 THEN
+			INSERT INTO discontinued_products VALUES
+            (new.productCode, new.discontinue_reason, new.discontinuing_manager, 'SYSTEM', 'SYSTEM', 'Product was set as discontinued in the current products table', 'D');
+		END IF;
+	END IF;
+    
+	-- if the new status is 'C' and the old one is 'D'
+	IF(old.current_status = 'D' AND new.current_status = 'C') THEN
+		DELETE FROM discontinued_products
+        WHERE productCode = new.productCode;
+	END IF;
+
+END $$
+DELIMITER ;
+
 DROP TRIGGER IF EXISTS current_products_AFTER_UPDATE;
 DELIMITER $$
 CREATE TRIGGER current_products_AFTER_UPDATE AFTER UPDATE ON current_products FOR EACH ROW BEGIN
@@ -664,15 +687,12 @@ CREATE TRIGGER current_products_BEFORE_DELETE BEFORE DELETE ON current_products 
 END $$
 DELIMITER ;
 
--- create new column in discontinued products 'quantityLeft'
-ALTER TABLE `dbsalesv2.0`.`discontinued_products` 
-ADD COLUMN `quantityLeft` SMALLINT NULL AFTER `inventory_manager`;
-
 -- PART 4B.E (TAN)
 --  for checking if a product is being recontinued 
 DROP TRIGGER IF EXISTS products_BEFORE_UPDATE;
 DELIMITER $$
 CREATE TRIGGER `products_BEFORE_UPDATE` BEFORE UPDATE ON `products` FOR EACH ROW BEGIN
+    /*The below trigger details are no longer used
     
     DECLARE current_stock INT;
     
@@ -713,7 +733,7 @@ CREATE TRIGGER `products_BEFORE_UPDATE` BEFORE UPDATE ON `products` FOR EACH ROW
         -- move the quantity of quantity in stock to discontinued products
         UPDATE `dbsalesv2.0`.`current_products` SET `quantityInStock` = '0' 
         WHERE (`productCode` = new.productCode);
-    END IF;
+    END IF;*/
 END $$
 DELIMITER ;
 
@@ -722,8 +742,8 @@ DROP TRIGGER IF EXISTS discontinued_products_AFTER_INSERT;
 DELIMITER $$
 CREATE	TRIGGER discontinued_products_AFTER_INSERT AFTER INSERT ON discontinued_products FOR EACH ROW BEGIN
 	INSERT INTO audit_discontinued_products VALUES
-		('C', NOW(), new.productCode, NULL, NULL, NULL,
-		  new.reason, new.inventoryManager, new.quantityLeft,
+		('C', NOW(), new.productCode, NULL, NULL,
+		  new.reason, new.inventoryManager,
           USER(), 
           new.latest_audituser, new.latest_authorizinguser,
           new.latest_activityreason, new.latest_activitymethod);
@@ -734,8 +754,8 @@ DROP TRIGGER IF EXISTS discontinued_products_AFTER_UPDATE;
 DELIMITER $$
 CREATE TRIGGER discontinued_products_AFTER_UPDATE AFTER UPDATE ON discontinued_products FOR EACH ROW BEGIN
 	INSERT INTO audit_discontinued_products VALUES
-		('U', NOW(), new.productCode, new.reason, new.inventoryManager, new.quantityLeft,
-		  old.reason, old.inventoryManager, old.quantityLeft,
+		('U', NOW(), new.productCode, new.reason, new.inventoryManager,
+		  old.reason, old.inventoryManager,
           USER(), 
           new.latest_audituser, new.latest_authorizinguser,
           new.latest_activityreason, new.latest_activitymethod);
@@ -746,8 +766,8 @@ DROP TRIGGER IF EXISTS discontinued_products_BEFORE_DELETE;
 DELIMITER $$
 CREATE TRIGGER discontinued_products_BEFORE_DELETE BEFORE DELETE ON discontinued_products FOR EACH ROW BEGIN
 	INSERT INTO audit_discontinued_products VALUES
-		('D', NOW(), old.productCode, NULL, NULL, NULL,
-        old.reason, old.inventoryManager, old.quantityLeft,
+		('D', NOW(), old.productCode, NULL, NULL,
+        old.reason, old.inventoryManager,
 		USER(), NULL, NULL, NULL, NULL);
 END $$
 DELIMITER ;

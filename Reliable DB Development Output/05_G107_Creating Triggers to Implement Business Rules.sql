@@ -648,7 +648,7 @@ DELIMITER $$
 CREATE TRIGGER current_products_BEFORE_UPDATE BEFORE UPDATE ON current_products FOR EACH ROW BEGIN
 
 	-- if the new status is 'D' and the old one is 'C' and there is a discontiuing_manager in current_products row
-	IF(old.current_status = 'C' AND new.current_status = 'D' AND new.discontiuing_manager IS NOT NULL) THEN
+	IF(old.current_status = 'C' AND new.current_status = 'D' AND new.discontinuing_manager IS NOT NULL) THEN
 		-- if there are no entries in the discontinued products table that correspond to this current_product
 		IF (SELECT COUNT(*) FROM discontinued_products WHERE productCode = new.productCode) = 0 THEN
 			INSERT INTO discontinued_products VALUES
@@ -707,7 +707,7 @@ DELIMITER $$
 CREATE	TRIGGER discontinued_products_AFTER_INSERT AFTER INSERT ON discontinued_products FOR EACH ROW BEGIN
 	INSERT INTO audit_discontinued_products VALUES
 		('C', NOW(), new.productCode, NULL, NULL,
-		  new.reason, new.inventoryManager,
+		  new.reason, new.inventory_manager,
           USER(), 
           new.latest_audituser, new.latest_authorizinguser,
           new.latest_activityreason, new.latest_activitymethod);
@@ -718,8 +718,8 @@ DROP TRIGGER IF EXISTS discontinued_products_AFTER_UPDATE;
 DELIMITER $$
 CREATE TRIGGER discontinued_products_AFTER_UPDATE AFTER UPDATE ON discontinued_products FOR EACH ROW BEGIN
 	INSERT INTO audit_discontinued_products VALUES
-		('U', NOW(), new.productCode, new.reason, new.inventoryManager,
-		  old.reason, old.inventoryManager,
+		('U', NOW(), new.productCode, new.reason, new.inventory_manager,
+		  old.reason, old.inventory_manager,
           USER(), 
           new.latest_audituser, new.latest_authorizinguser,
           new.latest_activityreason, new.latest_activitymethod);
@@ -731,7 +731,7 @@ DELIMITER $$
 CREATE TRIGGER discontinued_products_BEFORE_DELETE BEFORE DELETE ON discontinued_products FOR EACH ROW BEGIN
 	INSERT INTO audit_discontinued_products VALUES
 		('D', NOW(), old.productCode, NULL, NULL,
-        old.reason, old.inventoryManager,
+        old.reason, old.inventory_manager,
 		USER(), NULL, NULL, NULL, NULL);
 END $$
 DELIMITER ;

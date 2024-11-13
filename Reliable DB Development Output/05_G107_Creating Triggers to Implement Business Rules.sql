@@ -634,8 +634,8 @@ DROP TRIGGER IF EXISTS current_products_AFTER_INSERT;
 DELIMITER $$
 CREATE	TRIGGER current_products_AFTER_INSERT AFTER INSERT ON current_products FOR EACH ROW BEGIN
 	INSERT INTO audit_current_products VALUES
-		('C', NOW(), new.productCode, NULL, NULL,
-		  new.product_type, new.quantityInStock,
+		('C', NOW(), new.productCode, NULL, NULL, NULL, NULL, NULL,
+		  new.product_type, new.quantityInStock, new.current_status, new.discontinuing_manager, new.discontinue_reason,
           USER(), 
           new.latest_audituser, new.latest_authorizinguser,
           new.latest_activityreason, new.latest_activitymethod);
@@ -646,8 +646,8 @@ DROP TRIGGER IF EXISTS current_products_AFTER_UPDATE;
 DELIMITER $$
 CREATE TRIGGER current_products_AFTER_UPDATE AFTER UPDATE ON current_products FOR EACH ROW BEGIN
 INSERT INTO audit_current_products VALUES
-		('U', NOW(), new.productCode, old.product_type, old.quantityInStock,
-		  new.product_type, new.quantityInStock,
+		('U', NOW(), new.productCode, old.product_type, old.quantityInStock, old.current_status, old.discontinuing_manager, old.discontinue_reason,
+		  new.product_type, new.quantityInStock, new.current_status, new.discontinuing_manager, new.discontinue_reason,
           USER(), 
           new.latest_audituser, new.latest_authorizinguser,
           new.latest_activityreason, new.latest_activitymethod);
@@ -658,8 +658,8 @@ DROP TRIGGER IF EXISTS current_products_BEFORE_DELETE;
 DELIMITER $$
 CREATE TRIGGER current_products_BEFORE_DELETE BEFORE DELETE ON current_products FOR EACH ROW BEGIN
 	INSERT INTO audit_current_products VALUES
-		('D', NOW(), old.productCode, NULL, NULL,
-        old.product_type, old.quantityInStock, 
+		('D', NOW(), old.productCode, NULL, NULL, NULL, NULL, NULL,
+        old.product_type, old.quantityInStock, old.current_status, old.discontinuing_manager, old.discontinue_reason,
 		USER(), NULL, NULL, NULL, NULL);
 END $$
 DELIMITER ;

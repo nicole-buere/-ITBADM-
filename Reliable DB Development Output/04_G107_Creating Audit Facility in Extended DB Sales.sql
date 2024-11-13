@@ -231,8 +231,14 @@ CREATE TABLE audit_current_products (
   productCode 				varchar(15) 		NOT NULL,
   old_product_type 			enum('R','W') 		DEFAULT NULL,
   old_quantityInStock		smallInt 			DEFAULT NULL,
+  old_current_status		enum('C', 'D')	DEFAULT NULL,
+  old_discontinuing_manager	int	DEFAULT NULL,
+  old_discontinue_reason	varchar(45) DEFAULT NULL,
   new_product_type 			enum('R','W') 		DEFAULT NULL,
   new_quantityInStock		smallInt			DEFAULT NULL,
+  new_current_status		enum('C', 'D')	DEFAULT NULL,
+  new_discontinuing_manager	int	DEFAULT NULL,
+  new_discontinue_reason	varchar(45) DEFAULT NULL,
   dbuser 					varchar(45)	 		DEFAULT NULL,
   latest_audituser 			varchar(45) 		DEFAULT NULL,
   latest_authorizinguser	varchar(45) 		DEFAULT NULL,
@@ -262,11 +268,27 @@ CREATE TABLE audit_discontinued_products (
 );
 
 -- alter current products to include columns used for audit
+-- also adds columns for requirements 4b.e (TAN)
 ALTER TABLE current_products
+  ADD COLUMN current_status				enum('C', 'D')	NULL DEFAULT 'C',
+  ADD COLUMN discontinuing_manager		int	DEFAULT NULL,
+  ADD COLUMN discontinue_reason			varchar(45) DEFAULT NULL,
   ADD COLUMN latest_audituser 			varchar(45) DEFAULT NULL,
   ADD COLUMN latest_authorizinguser 	varchar(45) DEFAULT NULL,
   ADD COLUMN latest_activityreason 		varchar(45) DEFAULT NULL,
   ADD COLUMN latest_activitymethod 		enum('W','M','D') DEFAULT NULL;
+  
+-- add foreign key constraint to 'discontinuing_manager' (TAN)
+ALTER TABLE current_products
+ADD INDEX `FK90_002_idx` (`discontinuing_manager` ASC) VISIBLE;
+;
+ALTER TABLE `dbsalesv2.0`.`current_products` 
+ADD CONSTRAINT `FK90_002`
+  FOREIGN KEY (`discontinuing_manager`)
+  REFERENCES `dbsalesv2.0`.`inventory_managers` (`employeeNumber`)
+  ON DELETE RESTRICT
+  ON UPDATE RESTRICT;
+
 
 -- alter discontinued products to include columns used for audit
 ALTER TABLE discontinued_products

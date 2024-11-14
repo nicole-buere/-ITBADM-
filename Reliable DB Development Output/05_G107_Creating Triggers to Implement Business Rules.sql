@@ -87,7 +87,7 @@ CREATE TRIGGER `orders_BEFORE_INSERT` BEFORE INSERT ON `orders` FOR EACH ROW BEG
 
 	SET new.orderdate := NOW();
     IF (TIMESTAMPDIFF(DAY, new.orderdate, new.requireddate) < 3) THEN
-		SET errormessage = CONCAT("Required Data cannot be less than 3 days from the Order Date of ", new.orderdate);
+		SET errormessage = CONCAT("Required Date cannot be less than 3 days from the Order Date of ", new.orderdate);
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
     SET new.status = "In-Process";

@@ -345,3 +345,26 @@ CREATE TABLE audit_check_payments (
   latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
   PRIMARY KEY (customerNumber,paymentTimestamp,activity_timestamp)
 );
+
+-- alter couriers to include columns used for audit (TAN)
+ALTER TABLE couriers
+  ADD COLUMN latest_audituser 			varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_authorizinguser 	varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activityreason 		varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activitymethod 		enum('W','M','D') DEFAULT NULL;
+  
+-- audit table for couriers (TAN)
+DROP TABLE IF EXISTS audit_couriers;
+CREATE TABLE audit_couriers (
+  activity 					enum('C','U','D') 	DEFAULT NULL,
+  activity_timestamp		datetime 			NOT NULL,
+  courierName 				VARCHAR(100) 		NOT NULL,
+  old_address				VARCHAR(100) 		DEFAULT NULL,
+  new_address				VARCHAR(100) 		DEFAULT NULL,
+  dbuser 					varchar(45)	 		DEFAULT NULL,
+  latest_audituser 			varchar(45) 		DEFAULT NULL,
+  latest_authorizinguser	varchar(45) 		DEFAULT NULL,
+  latest_activityreason	 	varchar(45) 		DEFAULT NULL,
+  latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
+  PRIMARY KEY (courierName,activity_timestamp)
+);

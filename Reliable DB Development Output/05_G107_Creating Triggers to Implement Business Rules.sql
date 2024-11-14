@@ -802,3 +802,39 @@ CREATE TRIGGER check_payments_BEFORE_DELETE BEFORE DELETE ON check_payments FOR 
           USER(), NULL, NULL, NULL, NULL);
 END $$
 DELIMITER ;
+
+-- audit table triggers for couriers (TAN)
+DROP TRIGGER IF EXISTS couriers_AFTER_INSERT;
+DELIMITER $$
+CREATE	TRIGGER couriers_AFTER_INSERT AFTER INSERT ON couriers FOR EACH ROW BEGIN
+	INSERT INTO audit_couriers VALUES
+		('C', NOW(), new.courierName, NULL,
+		  new.address,
+          USER(), 
+          new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS couriers_AFTER_UPDATE;
+DELIMITER $$
+CREATE TRIGGER couriers_AFTER_UPDATE AFTER UPDATE ON couriers FOR EACH ROW BEGIN
+	INSERT INTO audit_couriers VALUES
+		('U', NOW(), new.courierName,
+		  old.address,
+          new.address,
+          USER(), new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS couriers_BEFORE_DELETE;
+DELIMITER $$
+CREATE TRIGGER couriers_BEFORE_DELETE BEFORE DELETE ON couriers FOR EACH ROW BEGIN
+	INSERT INTO audit_couriers VALUES
+		('D', NOW(), old.courierName,
+		  NULL,
+		  old.address,
+          USER(), NULL, NULL, NULL, NULL);
+END $$
+DELIMITER ;

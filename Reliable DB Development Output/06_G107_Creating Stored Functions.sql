@@ -127,7 +127,7 @@ BEGIN
 
     -- Check if transition is In Process to Shipped    
     IF (param_oldstatus = "In Process") THEN
-		IF (param_newstatus != "Shipped") THEN
+		IF (param_newstatus != "Shipped") OR ( param_newstatus = "Cancelled" )THEN
 			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
 			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;		
         END IF;	

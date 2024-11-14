@@ -107,7 +107,7 @@ CREATE TRIGGER `orders_BEFORE_INSERT` BEFORE INSERT ON `orders` FOR EACH ROW BEG
 		SET errormessage = CONCAT("Required Data cannot be less than 3 days from the Order Date of ", new.orderdate);
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
-    SET new.status = "In-Process";
+    SET new.status = "In Process";
     IF (new.shippeddate IS NOT NULL) THEN
 		SET errormessage = CONCAT("The order is a new order with ordernumber - ", new.ordernumber, " and it should not have a shipped date yet");
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;

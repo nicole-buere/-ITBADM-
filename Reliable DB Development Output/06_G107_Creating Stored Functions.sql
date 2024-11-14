@@ -278,6 +278,7 @@ DELIMITER ;
 -- PART 4B.A (BUERE) 
 DROP PROCEDURE IF EXISTS add_product;
 DELIMITER $$
+
 CREATE PROCEDURE add_product(
     IN v_productCode VARCHAR(15),
     IN v_productName VARCHAR(70),
@@ -341,8 +342,9 @@ END $$
 DELIMITER ;
 
 -- Part 4C.D
-DROP PROCEDURE IF EXISTS auto_reassign_salesRep
+DROP PROCEDURE IF EXISTS auto_reassign_salesRep;
 DELIMITER $$
+
 CREATE PROCEDURE auto_reassign_salesRep(IN p_employeeNumber INT)
 BEGIN
     DECLARE v_officeCode INT;

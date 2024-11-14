@@ -602,41 +602,55 @@ DELIMITER ;
 DROP TRIGGER IF EXISTS before_insert_salesrepassignments;
 DELIMITER $$
 CREATE TRIGGER before_insert_salesrepassignments
-BEFORE INSERT ON salesrepassignments FOR EACH ROW BEGIN
-    DECLARE v_endDate DATE; 
-    
-    -- check if the employee already has an active assignment
+BEFORE INSERT ON salesrepassignments
+FOR EACH ROW
+BEGIN
+    DECLARE v_endDate DATE;
+
+    -- Check if the employee already has an active assignment
     SELECT MAX(endDate) INTO v_endDate
     FROM salesrepassignments
     WHERE employeeNumber = NEW.employeeNumber;
-    
-    -- if there's an active assignment, set start date to the day after it ends
+
+    -- If there's an active assignment, set start date to the day after it ends
     IF v_endDate IS NOT NULL AND v_endDate >= CURDATE() THEN
         SET NEW.startDate = DATE_ADD(v_endDate, INTERVAL 1 DAY);
-        
-        -- limit the assignment duration to a maximum of one month
-        SET NEW.endDate = LEAST(DATE_ADD(NEW.startDate, INTERVAL 1 MONTH), NEW.endDate);
+
+        -- Restrict assignment duration to a maximum of one month
+        IF NEW.endDate > DATE_ADD(NEW.startDate, INTERVAL 1 MONTH) THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'End date cannot exceed one month from the start date.';
+        END IF;
     ELSE
-        -- if no active assignment, allow the specified start and end dates
+        -- If no active assignment, allow the specified start and end dates
         SET NEW.startDate = CURDATE();
-        SET NEW.endDate = LEAST(DATE_ADD(NEW.startDate, INTERVAL 1 MONTH), NEW.endDate);
+
+        -- Restrict assignment duration to a maximum of one month
+        IF NEW.endDate > DATE_ADD(NEW.startDate, INTERVAL 1 MONTH) THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'End date cannot exceed one month from the start date.';
+        END IF;
     END IF;
 
-    -- ensure the Sales Manager quota is applied
-    IF NEW.quota IS NULL THEN
+    -- Validate quota provided by Sales Manager
+    IF NEW.quota IS NULL OR NEW.quota <= 0 THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Quota must be set by the Sales Manager for new assignments.';
+        SET MESSAGE_TEXT = 'Quota must be provided by the Sales Manager and must be greater than zero.';
     END IF;
 END$$
 DELIMITER ;
 
+
 DROP TRIGGER IF EXISTS before_update_salesrepassignments;
 DELIMITER $$
 CREATE TRIGGER before_update_salesrepassignments BEFORE UPDATE ON salesrepassignments FOR EACH ROW BEGIN
-    -- Enforce a maximum assignment duration of one month
-    IF DATEDIFF(NEW.endDate, NEW.startDate) > 30 THEN
-        SET NEW.endDate = DATE_ADD(NEW.startDate, INTERVAL 1 MONTH);
+    --4C.E
+    -- Restrict assignment duration to a maximum of one month
+    IF NEW.endDate > DATE_ADD(NEW.startDate, INTERVAL 1 MONTH) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'End date cannot exceed one month from the start date.';
     END IF;
+
 
     -- Prevent updates to quota if not authorized
      -- 4C.F (KRUEGER)

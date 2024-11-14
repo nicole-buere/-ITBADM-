@@ -3,19 +3,36 @@
 -- select orders
 SELECT * FROM `dbsalesv2.0`.orders;
 
+SELECT * FROM `dbsalesv2.0`.orderdetails;
+SELECT * FROM `dbsalesv2.0`.audit_orderdetails;
+
+SELECT * FROM `dbsalesv2.0`.orderdetails
+WHERE orderNumber = '10428';
+
 -- select current products
 SELECT * FROM `dbsalesv2.0`.current_products;
 
--- delete an order (should fail)
-DELETE FROM `dbsalesv2.0`.`orders` WHERE (`orderNumber` = '10427');
+-- insert an order (should succeed)
+INSERT INTO `dbsalesv2.0`.`orders` (`orderNumber`, `orderDate`, `requiredDate`, `status`, `comments`, `customerNumber`) 
+VALUES ('10428', '2016-09-15 16:01:36', '2025-01-01 00:00:00', 'In Process', 'Test Order 4 ae', '119');
+-- insert and orderdetail (should succeed)
+INSERT INTO `dbsalesv2.0`.`orderdetails` (`orderNumber`, `productCode`, `quantityOrdered`, `priceEach`, `orderLineNumber`) 
+VALUES ('10428', 'S24_2022', '20', '44.80', '1');
 
--- updated a cancelled order (should fail)
-UPDATE `dbsalesv2.0`.`orders` SET `shippedDate` = '2004-06-17 00:00:00' 
-WHERE `orderNumber` = '10260' AND status = 'Cancelled';
+INSERT INTO `dbsalesv2.0`.`orderdetails` (`orderNumber`, `productCode`, `quantityOrdered`, `priceEach`, `orderLineNumber`) 
+VALUES ('10428', 'S18_1749', '20', '136', '1');
+
+
+-- delete an order (should fail)
+DELETE FROM `dbsalesv2.0`.`orders` WHERE (`orderNumber` = '10428');
 
 -- cancel an order (should pass)
 UPDATE `dbsalesv2.0`.`orders` SET `status` = 'Cancelled' 
-WHERE (`orderNumber` = '10101');
+WHERE (`orderNumber` = '10428');
+
+-- updated a cancelled order (should fail)
+UPDATE `dbsalesv2.0`.`orders` SET `comments` = 'test comment' 
+WHERE `orderNumber` = '10101' AND status = 'Cancelled';
 
 -- 4B.E test script (TAN)
 

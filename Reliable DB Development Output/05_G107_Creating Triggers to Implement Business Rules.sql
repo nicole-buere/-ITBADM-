@@ -44,6 +44,14 @@ DELIMITER $$
 CREATE TRIGGER `orderdetails_AFTER_INSERT` AFTER INSERT ON `orderdetails` FOR EACH ROW BEGIN
     -- Remove from the inventory the qty of the product ordered
 	UPDATE current_products SET quantityInStock = quantityInStock - new.quantityOrdered WHERE productCode = new.productCode;
+    
+	INSERT INTO audit_orderdetails VALUES
+		('C', NOW(), new.orderNumber, new.productCode, NULL, NULL, NULL, NULL, NULL, NULL,
+		  new.quantityOrdered, new.priceEach, new.orderLineNumber, 
+          new.referenceNo,
+          USER(), 
+          new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
 END $$
 DELIMITER ;
 
@@ -72,6 +80,15 @@ DELIMITER $$
 CREATE TRIGGER `orderdetails_AFTER_UPDATE` AFTER UPDATE ON `orderdetails` FOR EACH ROW BEGIN
     -- Remove from the inventory the qty of the product ordered
 	UPDATE current_products SET quantityInStock = quantityInStock + old.quantityOrdered - new.quantityOrdered WHERE productCode = new.productCode;
+    
+	INSERT INTO audit_orderdetails VALUES
+		('U', NOW(), new.orderNumber, new.productCode, 
+		  old.quantityOrdered, old.priceEach, 
+          old.orderLineNumber, old.referenceNo,
+		  new.quantityOrdered, new.priceEach, 
+          new.orderLineNumber, new.referenceNo,
+          USER(), new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
 END $$
 DELIMITER ;
 
@@ -325,6 +342,12 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
 
+	INSERT INTO audit_orderdetails VALUES
+		('D', NOW(), old.orderNumber, old.productCode, NULL, NULL, NULL, NULL, NULL, NULL,
+        old.quantityOrdered, old.priceEach, 
+		old.orderLineNumber, old.referenceNo,
+		USER(), NULL, NULL, NULL, NULL);
+        
 END$$
 DELIMITER ;
 

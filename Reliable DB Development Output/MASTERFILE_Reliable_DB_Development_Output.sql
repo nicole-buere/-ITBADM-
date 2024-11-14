@@ -3358,7 +3358,7 @@ ON SCHEDULE EVERY 30 DAY
 STARTS '2024-10-31 00:00:00'
 DO
 BEGIN
-	 CALL generate_sales_report(YEAR(CURDATE()), MONTH(CURDATE()));
+	CALL generate_sales_report(YEAR(CURDATE()), MONTH(CURDATE()));
     -- CALL generate_sales_report(2003,9);
 END$$
 DELIMITER ;
@@ -3446,7 +3446,7 @@ STARTS '2024-10-31 00:00:00'
 DO
 BEGIN
     CALL generate_quantity_ordered_report(YEAR(CURDATE()), MONTH(CURDATE()));
-    -- CALL generate_quantity_ordered_report(2004, 11);
+    -- CALL generate_quantity_ordered_report(2024, 11);
 END $$
 DELIMITER ;
 
@@ -3468,6 +3468,7 @@ CREATE TABLE turnaroundtime_reports (
     AVERAGETURNAROUND   DECIMAL(9,2),
     generationdate      DATETIME,                -- The date when the report was generated
     generatedby         VARCHAR(100),            -- Who generated the report
+    generationdesc      VARCHAR(255),            -- Description of the report generation
     PRIMARY KEY (entryid)                       -- Use entryid as the primary key
 );
 
@@ -3487,7 +3488,7 @@ BEGIN
     SET v_month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
     
     -- Insert summarized turnaround time report data into turnaroundtime_reports table using the generated report id
-    INSERT INTO turnaroundtime_reports (reportid, reportyear, reportmonth, country, office, AVERAGETURNAROUND, generationdate, generatedby)
+    INSERT INTO turnaroundtime_reports (reportid, reportyear, reportmonth, country, office, AVERAGETURNAROUND, generationdate, generatedby, generationdesc)
     SELECT  
         v_reportid AS reportid,
         p_year AS reportyear,
@@ -3496,7 +3497,8 @@ BEGIN
         ofc.officeCode AS office,
         AVG(TIMESTAMPDIFF(DAY, o.orderdate, o.shippeddate)) AS AVERAGETURNAROUND,
         NOW() AS generationdate,
-        IF(CURRENT_USER() = 'root@localhost', 'System', CURRENT_USER()) AS generatedby
+        IF(CURRENT_USER() = 'root@localhost', 'System', CURRENT_USER()) AS generatedby,
+        CONCAT('Turnaround Time Report for ', v_month_name, ' ', p_year) AS generationdesc
     FROM    
         orders o
         JOIN customers c ON o.customerNumber = c.customerNumber
@@ -3556,6 +3558,7 @@ CREATE TABLE pricing_variation_reports (
     pricevariation      DECIMAL(9,2),
     generationdate      DATETIME,                -- The date when the report was generated
     generatedby         VARCHAR(100),            -- Who generated the report
+    generationdesc      VARCHAR(255),            -- Description of the report generation
     PRIMARY KEY (entryid)                       -- Use entryid as the primary key
 );
 
@@ -3575,7 +3578,7 @@ BEGIN
     SET v_month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
     
     -- Insert summarized pricing variation data into pricing_variation_reports table using the generated report id
-    INSERT INTO pricing_variation_reports (reportid, reportyear, reportmonth, product_code, product_line, pricevariation, generationdate, generatedby)
+    INSERT INTO pricing_variation_reports (reportid, reportyear, reportmonth, product_code, product_line, pricevariation, generationdate, generatedby, generationdesc)
     SELECT  
         v_reportid AS reportid,
         p_year AS reportyear,
@@ -3584,7 +3587,8 @@ BEGIN
         pp.productLine,
         ROUND(AVG(od.priceeach - getMSRP_2(p.productCode, o.orderdate)), 2) AS pricevariation,
         NOW() AS generationdate,
-        IF(CURRENT_USER() = 'root@localhost', 'System', CURRENT_USER()) AS generatedby
+        IF(CURRENT_USER() = 'root@localhost', 'System', CURRENT_USER()) AS generatedby,
+        CONCAT('Pricing Variation Report for ', v_month_name, ' ', p_year) AS generationdesc
     FROM    
         orders o
         JOIN orderdetails od ON o.orderNumber = od.orderNumber
@@ -3611,6 +3615,7 @@ DELIMITER ;
 
 
 
+
 -- Create an event to generate the pricing variation report every month
 DROP EVENT IF EXISTS generate_monthly_pricing_variation_report;
 DELIMITER $$
@@ -3621,13 +3626,11 @@ STARTS '2024-10-31 00:00:00'
 DO
 BEGIN
     CALL generate_pricing_variation_report(YEAR(CURDATE()), MONTH(CURDATE()));
-    -- CALL generate_pricing_variation_report(2003,10);
+    --  CALL generate_pricing_variation_report(2003,10);
 END $$
 DELIMITER ;
 
 
-
--- CALL generate_pricing_variation_report(2003,10);
 -- SELECT * FROM pricing_variation_reports ORDER BY reportid DESC;
 
 

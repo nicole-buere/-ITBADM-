@@ -248,20 +248,30 @@ DELIMITER ;
 
 
 -- PART 4A.F (PEGALAN)
-DROP EVENT IF EXISTS auto_cancel_unshipped_orders;
+DROP PROCEDURE IF EXISTS procedure_auto_cancel_unshipped_orders;
 DELIMITER $$
-CREATE EVENT auto_cancel_unshipped_orders
-ON SCHEDULE EVERY 1 DAY
-DO
+
+CREATE PROCEDURE procedure_auto_cancel_unshipped_orders()
 BEGIN
     -- Update orders that are more than 7 days old and have not been shipped
     UPDATE orders
     SET `status` = 'Cancelled',
-        comments = CONCAT(IFNULL(comments, ''), 'System auto-cancelled the order due to delay in shipping.')
+        comments = CONCAT(IFNULL(comments, ''), ' System auto-cancelled the order due to delay in shipping.')
     WHERE `status` = 'In Process'
       AND DATEDIFF(NOW(), orderDate) > 7;
-
 END $$
+
+DELIMITER ;
+
+
+DROP EVENT IF EXISTS auto_cancel_unshipped_orders;
+DELIMITER $$
+
+CREATE EVENT auto_cancel_unshipped_orders
+ON SCHEDULE EVERY 1 DAY
+DO
+CALL procedure_auto_cancel_unshipped_orders();
+$$
 
 DELIMITER ;
 

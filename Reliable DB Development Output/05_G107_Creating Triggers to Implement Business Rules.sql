@@ -736,3 +736,39 @@ CREATE TRIGGER discontinued_products_BEFORE_DELETE BEFORE DELETE ON discontinued
 		USER(), NULL, NULL, NULL, NULL);
 END $$
 DELIMITER ;
+
+-- audit triggers for banks table (TAN)
+DROP TRIGGER IF EXISTS banks_AFTER_INSERT;
+DELIMITER $$
+CREATE	TRIGGER banks_AFTER_INSERT AFTER INSERT ON banks FOR EACH ROW BEGIN
+	INSERT INTO audit_banks VALUES
+		('C', NOW(), new.bank, NULL, NULL, NULL,
+		  new.bankname, new.branch, new.branchaddress, 
+          USER(), 
+          new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS banks_AFTER_UPDATE;
+DELIMITER $$
+CREATE TRIGGER banks_AFTER_UPDATE AFTER UPDATE ON banks FOR EACH ROW BEGIN
+	INSERT INTO audit_banks VALUES
+		('U', NOW(), new.bank, 
+		  old.bankname, old.branch, old.branchaddress, 
+          new.bankname, new.branch, new.branchaddress, 
+          USER(), new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS banks_BEFORE_DELETE;
+DELIMITER $$
+CREATE TRIGGER banks_BEFORE_DELETE BEFORE DELETE ON banks FOR EACH ROW BEGIN
+	INSERT INTO audit_banks VALUES
+		('D', NOW(), old.bank, 
+		  NULL, NULL, NULL,
+		  old.bankname, old.branch, old.branchaddress, 
+          USER(), NULL, NULL, NULL, NULL);
+END $$
+DELIMITER ;

@@ -319,5 +319,5 @@ CREATE TABLE audit_banks (
   latest_authorizinguser	varchar(45) 		DEFAULT NULL,
   latest_activityreason	 	varchar(45) 		DEFAULT NULL,
   latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
-  PRIMARY KEY (productCode,activity_timestamp)
+  PRIMARY KEY (bank,activity_timestamp)
 );

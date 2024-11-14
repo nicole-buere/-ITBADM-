@@ -766,3 +766,39 @@ CREATE TRIGGER banks_BEFORE_DELETE BEFORE DELETE ON banks FOR EACH ROW BEGIN
           USER(), NULL, NULL, NULL, NULL);
 END $$
 DELIMITER ;
+
+-- audit triggers for check_payments table (TAN)
+DROP TRIGGER IF EXISTS check_payments_AFTER_INSERT;
+DELIMITER $$
+CREATE	TRIGGER check_payments_AFTER_INSERT AFTER INSERT ON check_payments FOR EACH ROW BEGIN
+	INSERT INTO audit_check_payments VALUES
+		('C', NOW(), new.customerNumber, new.paymentTimestamp, NULL,
+		  new.checkno,
+          USER(), 
+          new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS check_payments_AFTER_UPDATE;
+DELIMITER $$
+CREATE TRIGGER check_payments_AFTER_UPDATE AFTER UPDATE ON check_payments FOR EACH ROW BEGIN
+	INSERT INTO audit_check_payments VALUES
+		('U', NOW(), new.customerNumber, new.paymentTimestamp, 
+		  old.checkno,
+          new.checkno,
+          USER(), new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS check_payments_BEFORE_DELETE;
+DELIMITER $$
+CREATE TRIGGER check_payments_BEFORE_DELETE BEFORE DELETE ON check_payments FOR EACH ROW BEGIN
+	INSERT INTO audit_check_payments VALUES
+		('D', NOW(), old.customerNumber, old.paymentTimestamp, 
+		  NULL,
+		  old.checkno,
+          USER(), NULL, NULL, NULL, NULL);
+END $$
+DELIMITER ;

@@ -321,3 +321,27 @@ CREATE TABLE audit_banks (
   latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
   PRIMARY KEY (bank,activity_timestamp)
 );
+
+-- alter check_payments to include columns used for audit (TAN)
+ALTER TABLE check_payments
+  ADD COLUMN latest_audituser 			varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_authorizinguser 	varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activityreason 		varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activitymethod 		enum('W','M','D') DEFAULT NULL;
+  
+-- audit table for check_payments (TAN)
+DROP TABLE IF EXISTS audit_check_payments;
+CREATE TABLE audit_check_payments (
+  activity 					enum('C','U','D') 	DEFAULT NULL,
+  activity_timestamp		datetime 			NOT NULL,
+  customerNumber 			int 				NOT NULL,
+  paymentTimestamp			datetime			NOT NULL,
+  old_checkno				int					DEFAULT NULL,
+  new_checkno				int					DEFAULT NULL,
+  dbuser 					varchar(45)	 		DEFAULT NULL,
+  latest_audituser 			varchar(45) 		DEFAULT NULL,
+  latest_authorizinguser	varchar(45) 		DEFAULT NULL,
+  latest_activityreason	 	varchar(45) 		DEFAULT NULL,
+  latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
+  PRIMARY KEY (customerNumber,paymentTimestamp,activity_timestamp)
+);

@@ -282,6 +282,12 @@ BEGIN
     SET end_username = IFNULL(v_end_username, 'System');
     SET end_userreason = IFNULL(v_end_userreason, 'Automated system entry');
 
+    -- Check if quantityInStock is greater than 0
+    IF v_quantityInStock <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Quantity in stock must be greater than 0';
+    END IF;
+
     -- insert into products table and automatically categorize it as a current product ('C')
     INSERT INTO products (productCode, productName, productScale, productVendor, productDescription, buyPrice, product_category, latest_audituser, latest_activityreason)
     VALUES (v_productCode, v_productName, v_productScale, v_productVendor, v_productDescription, v_buyPrice, 'C', end_username, end_userreason);

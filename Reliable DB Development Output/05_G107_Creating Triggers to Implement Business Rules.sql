@@ -947,3 +947,34 @@ CREATE TRIGGER departments_BEFORE_DELETE BEFORE DELETE ON departments FOR EACH R
           USER(), NULL, NULL, NULL, NULL);
 END $$
 DELIMITER ;
+
+-- audit table triggers for inventory_managers (TAN)
+DROP TRIGGER IF EXISTS inventory_managers_AFTER_INSERT;
+DELIMITER $$
+CREATE	TRIGGER inventory_managers_AFTER_INSERT AFTER INSERT ON inventory_managers FOR EACH ROW BEGIN
+	INSERT INTO audit_inventory_managers VALUES
+		('C', NOW(), new.employeeNumber,
+          USER(), 
+          new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS inventory_managers_AFTER_UPDATE;
+DELIMITER $$
+CREATE TRIGGER inventory_managers_AFTER_UPDATE AFTER UPDATE ON inventory_managers FOR EACH ROW BEGIN
+	INSERT INTO audit_inventory_managers VALUES
+		('U', NOW(), new.employeeNumber,
+          USER(), new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS inventory_managers_BEFORE_DELETE;
+DELIMITER $$
+CREATE TRIGGER inventory_managers_BEFORE_DELETE BEFORE DELETE ON inventory_managers FOR EACH ROW BEGIN
+	INSERT INTO audit_inventory_managers VALUES
+		('D', NOW(), old.employeeNumber,
+          USER(), NULL, NULL, NULL, NULL);
+END $$
+DELIMITER ;

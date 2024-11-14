@@ -96,8 +96,10 @@ SELECT
     getMSRP(p.productCode) AS msrp
 FROM 
     products p;
+    
 
 GRANT SELECT ON view_product_msrp TO salesmodule, inventorymodule, paymentmodule;
+
 -- Create a function that checks for the valid values of status
 -- 4A.C
 DROP FUNCTION IF EXISTS isStatusValid;
@@ -271,10 +273,11 @@ CREATE EVENT auto_cancel_unshipped_orders
 ON SCHEDULE EVERY 1 DAY
 DO
 CALL procedure_auto_cancel_unshipped_orders();
-$$
-
+END $$
 DELIMITER ;
 
+
+SELECT * from orders;
 -- PART 4B.A (BUERE) 
 DROP PROCEDURE IF EXISTS add_product;
 DELIMITER $$

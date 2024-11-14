@@ -123,63 +123,63 @@ CREATE FUNCTION isValidStatus(param_oldstatus VARCHAR(15), param_newstatus VARCH
 RETURNS BOOLEAN
 DETERMINISTIC
 BEGIN
-	DECLARE errormessage		VARCHAR(200);
+    DECLARE errormessage VARCHAR(200);
     
-    IF (param_oldstatus = param_newstatus) THEN RETURN TRUE;
+    -- Allow same status transitions
+    IF (param_oldstatus = param_newstatus) THEN 
+        RETURN TRUE;
     END IF;
     
-    -- Check if the value of the status is valid
+    -- Validate both statuses
     IF (NOT isStatusValid(param_oldstatus) OR NOT isStatusValid(param_newstatus)) THEN
-		SET errormessage := CONCAT("Either ", param_oldstatus, " or ", param_newstatus, " is not a valid status");
-		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;	
+        SET errormessage := CONCAT("Either ", param_oldstatus, " or ", param_newstatus, " is not a valid status");
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;    
     END IF;
 
-    -- Check if transition is In Process to Shipped    
-    IF (param_oldstatus = "In Process") THEN
-		IF (param_newstatus != "Shipped") OR ( param_newstatus != "Cancelled" )THEN
-			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
-			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;		
-        END IF;	
+    -- Transition Rules
+    CASE param_oldstatus
+        WHEN 'In Process' THEN
+            IF (param_newstatus NOT IN ('Shipped', 'Cancelled')) THEN
+                SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed.");
+                SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+            END IF;
 
-    -- Shipped to In Process or Resolved should not be allowed
-	ELSEIF (param_oldstatus = "Shipped") THEN
-		IF (param_newstatus = "In Process") OR ( param_newstatus = "Resolved") THEN
-			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
-			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;		
-        END IF;	
-    
-    -- Check if transition is Shipped to Disputed or Shipped to Completed
-	ELSEIF (param_oldstatus = 'Shipped') THEN
-		IF (param_newstatus != 'Disputed' AND param_newstatus != 'Completed') THEN
-			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
-			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-		END IF;
-        
-	-- Check if transition is Disputed to Resolved
-	ELSEIF (param_oldstatus = 'Disputed') THEN
-		IF (param_newstatus != 'Resolved') THEN
-			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
-			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-		END IF;
-        
-	-- Check if transition is Resolved  to Completed
-	ELSEIF (param_oldstatus = 'Resolved') THEN
-		IF (param_newstatus != 'Completed') THEN
-			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
-			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-		END IF;
-	
-	-- Completed status should not allow any further changes
-	ELSEIF (param_oldstatus = 'Completed') THEN
-		SET errormessage := 'No status changes are allowed once the order is completed.';
-		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-	END IF;
-  RETURN TRUE;
+        WHEN 'Shipped' THEN
+            IF (param_newstatus NOT IN ('Disputed', 'Completed')) THEN
+                SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed.");
+                SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+            END IF;
+
+        WHEN 'Disputed' THEN
+            IF (param_newstatus NOT IN ('Resolved', 'Cancelled')) THEN
+                SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed.");
+                SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+            END IF;
+
+        WHEN 'Resolved' THEN
+            IF (param_newstatus NOT IN ('Completed', 'Cancelled')) THEN
+                SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed.");
+                SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+            END IF;
+
+        WHEN 'Completed' THEN
+            SET errormessage := 'No status changes are allowed once the order is completed.';
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+            
+		 WHEN 'Cancelled' THEN
+            SET errormessage := 'No status changes are allowed once the order is cancelled.';
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+		
+        ELSE
+            -- Invalid old status case (shouldn't occur if validation passes)
+            SET errormessage := CONCAT("Invalid old status: ", param_oldstatus);
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END CASE;
+
+    RETURN TRUE;
 END $$
 DELIMITER ;
 
--- Testing of Functions
--- SELECT isValidStatus("In Process","In Process");
 
 -- PART 4A.D (KRUEGER)
 -- Check if an order is shipped

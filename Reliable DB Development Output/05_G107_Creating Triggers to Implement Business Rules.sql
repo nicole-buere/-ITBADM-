@@ -838,3 +838,40 @@ CREATE TRIGGER couriers_BEFORE_DELETE BEFORE DELETE ON couriers FOR EACH ROW BEG
           USER(), NULL, NULL, NULL, NULL);
 END $$
 DELIMITER ;
+
+-- audit table triggers for credit_payments (TAN)
+DROP TRIGGER IF EXISTS credit_payments_AFTER_INSERT;
+DELIMITER $$
+CREATE	TRIGGER credit_payments_AFTER_INSERT AFTER INSERT ON credit_payments FOR EACH ROW BEGIN
+	INSERT INTO audit_credit_payments VALUES
+		('C', NOW(), new.customerNumber, new.paymentTimestamp, 
+		  NULL, NULL,
+		  new.postingDate, new.paymentReferenceNo,
+          USER(), 
+          new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS credit_payments_AFTER_UPDATE;
+DELIMITER $$
+CREATE TRIGGER credit_payments_AFTER_UPDATE AFTER UPDATE ON credit_payments FOR EACH ROW BEGIN
+	INSERT INTO audit_credit_payments VALUES
+		('U', NOW(), new.customerNumber, new.paymentTimestamp, 
+		  old.postingDate, old.paymentReferenceNo,
+          new.postingDate, new.paymentReferenceNo,
+          USER(), new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS credit_payments_BEFORE_DELETE;
+DELIMITER $$
+CREATE TRIGGER credit_payments_BEFORE_DELETE BEFORE DELETE ON credit_payments FOR EACH ROW BEGIN
+	INSERT INTO audit_credit_payments VALUES
+		('D', NOW(), old.customerNumber, old.paymentTimestamp, 
+		  NULL, NULL,
+		  old.postingDate, old.paymentReferenceNo,
+          USER(), NULL, NULL, NULL, NULL);
+END $$
+DELIMITER ;

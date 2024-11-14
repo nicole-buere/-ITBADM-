@@ -1,3 +1,12 @@
+DROP TABLE IF EXISTS reports_inventory;
+CREATE TABLE reports_inventory (
+	reportid		INT(10)	AUTO_INCREMENT,
+    generationdate	DATETIME,
+    generatedby		VARCHAR(100),
+    reportdesc		VARCHAR(100),
+    PRIMARY KEY (reportid)
+);
+
 -- Create a Special getMSRP
 DROP FUNCTION IF EXISTS getMSRP_2;
 DELIMITER $$
@@ -159,7 +168,7 @@ DELIMITER ;
 -- CALL generate_sales_report();
 -- SELECT * FROM reports_inventory ORDER BY generationdate ;
 -- SELECT * FROM sales_reports ORDER BY reportid ;
-SELECT * FROM orders;
+-- SELECT * FROM orders;
 
 
 -- REPORT02: Quantity Ordered Report
@@ -406,14 +415,11 @@ DELIMITER ;
 -- SELECT * FROM pricing_variation_reports ORDER BY reportid DESC LIMIT 1;
 
 
-DROP TABLE IF EXISTS reports_inventory;
-CREATE TABLE reports_inventory (
-	reportid		INT(10)	AUTO_INCREMENT,
-    generationdate	DATETIME,
-    generatedby		VARCHAR(100),
-    reportdesc		VARCHAR(100),
-    PRIMARY KEY (reportid)
-);
+
+
+-- ALTER TABLE turnaroundtime_reports DROP FOREIGN KEY turnaroundtime_reports_ibfk_1;
+
+
 
 -- ORIGINAL SQL
 

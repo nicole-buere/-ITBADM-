@@ -253,16 +253,16 @@ DELIMITER $$
 
 CREATE PROCEDURE procedure_auto_cancel_unshipped_orders()
 BEGIN
-    -- Update orders that are more than 7 days old and have not been shipped
+    -- Update orders that have not been shipped within 7 days from the order date
     UPDATE orders
-    SET `status` = 'Cancelled',
+    SET status = 'Cancelled',
         comments = CONCAT(IFNULL(comments, ''), ' System auto-cancelled the order due to delay in shipping.')
-    WHERE `status` = 'In Process'
-      AND DATEDIFF(NOW(), orderDate) > 7;
+    WHERE status = 'In Process'
+    AND shippedDate IS NULL
+    AND orderDate < DATE_SUB(CURDATE(), INTERVAL 7 DAY);
 END $$
 
 DELIMITER ;
-
 
 DROP EVENT IF EXISTS auto_cancel_unshipped_orders;
 DELIMITER $$

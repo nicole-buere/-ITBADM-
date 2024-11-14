@@ -169,44 +169,6 @@ ALTER TABLE orderdetails
   ADD COLUMN latest_authorizinguser 	varchar(45) DEFAULT NULL,
   ADD COLUMN latest_activityreason 		varchar(45) DEFAULT NULL,
   ADD COLUMN latest_activitymethod 		enum('W','M','D') DEFAULT NULL;
-  
-DROP TRIGGER IF EXISTS orderdetails_AFTER_INSERT;
-DELIMITER $$
-CREATE	TRIGGER orderdetails_AFTER_INSERT AFTER INSERT ON orderdetails FOR EACH ROW BEGIN
-	INSERT INTO audit_orderdetails VALUES
-		('C', NOW(), new.orderNumber, new.productCode, NULL, NULL, NULL, NULL, NULL, NULL,
-		  new.quantityOrdered, new.priceEach, new.orderLineNumber, 
-          new.referenceNo,
-          USER(), 
-          new.latest_audituser, new.latest_authorizinguser,
-          new.latest_activityreason, new.latest_activitymethod);
-END $$
-DELIMITER ;
-
-DROP TRIGGER IF EXISTS orderdetails_AFTER_UPDATE;
-DELIMITER $$
-CREATE TRIGGER orderdetails_AFTER_UPDATE AFTER UPDATE ON orderdetails FOR EACH ROW BEGIN
-	INSERT INTO audit_orderdetails VALUES
-		('U', NOW(), new.orderNumber, new.productCode, 
-		  old.quantityOrdered, old.priceEach, 
-          old.orderLineNumber, old.referenceNo,
-		  new.quantityOrdered, new.priceEach, 
-          new.orderLineNumber, new.referenceNo,
-          USER(), new.latest_audituser, new.latest_authorizinguser,
-          new.latest_activityreason, new.latest_activitymethod);
-END $$
-DELIMITER ;
-
-DROP TRIGGER IF EXISTS orderdetails_BEFORE_DELETE;
-DELIMITER $$
-CREATE TRIGGER orderdetails_BEFORE_DELETE BEFORE DELETE ON orderdetails FOR EACH ROW BEGIN
-	INSERT INTO audit_orderdetails VALUES
-		('D', NOW(), old.orderNumber, old.productCode, NULL, NULL, NULL, NULL, NULL, NULL,
-        old.quantityOrdered, old.priceEach, 
-		old.orderLineNumber, old.referenceNo,
-		USER(), NULL, NULL, NULL, NULL);
-END $$
-DELIMITER ;
 
 -- 4C.D 
 DROP TABLE IF EXISTS audit_salesrepassignments;

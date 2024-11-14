@@ -2,25 +2,26 @@
 
 -- select orders
 SELECT * FROM `dbsalesv2.0`.orders;
+SELECT * FROM `dbsalesv2.0`.audit_orders;
 
 SELECT * FROM `dbsalesv2.0`.orderdetails;
 SELECT * FROM `dbsalesv2.0`.audit_orderdetails;
 
 SELECT * FROM `dbsalesv2.0`.orderdetails
-WHERE orderNumber = '10430';
+WHERE orderNumber = '10428';
 
 -- select current products
 SELECT * FROM `dbsalesv2.0`.current_products;
 
 -- insert an order (should succeed)
 INSERT INTO `dbsalesv2.0`.`orders` (`orderNumber`, `orderDate`, `requiredDate`, `status`, `comments`, `customerNumber`) 
-VALUES ('10430', '2016-09-15 16:01:36', '2025-01-01 00:00:00', 'In Process', 'Test Order 4 ae', '119');
+VALUES ('10428', '2016-09-15 16:01:36', '2025-01-01 00:00:00', 'In Process', 'Test Order 4 ae', '119');
 -- insert and orderdetail (should succeed)
 INSERT INTO `dbsalesv2.0`.`orderdetails` (`orderNumber`, `productCode`, `quantityOrdered`, `priceEach`, `orderLineNumber`) 
-VALUES ('10430', 'S24_2022', '20', '44.80', '1');
+VALUES ('10428', 'S24_2022', '20', '44.80', '1');
 
 INSERT INTO `dbsalesv2.0`.`orderdetails` (`orderNumber`, `productCode`, `quantityOrdered`, `priceEach`, `orderLineNumber`) 
-VALUES ('10430', 'S18_1749', '20', '136', '1');
+VALUES ('10428', 'S18_1749', '20', '136', '1');
 
 
 -- delete an order (should fail)

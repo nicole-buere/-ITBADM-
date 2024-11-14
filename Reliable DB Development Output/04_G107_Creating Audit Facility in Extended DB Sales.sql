@@ -489,3 +489,26 @@ CREATE TABLE audit_inventory_managers (
   latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
   PRIMARY KEY (employeeNumber,activity_timestamp)
 );
+
+-- alter non_salesrepresentatives to include columns used for audit (TAN)
+ALTER TABLE non_salesrepresentatives
+  ADD COLUMN latest_audituser 			varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_authorizinguser 	varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activityreason 		varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activitymethod 		enum('W','M','D') DEFAULT NULL;
+  
+-- audit table for non_salesrepresentatives (TAN)
+DROP TABLE IF EXISTS audit_non_salesrepresentatives;
+CREATE TABLE audit_non_salesrepresentatives (
+  activity 					enum('C','U','D') 	DEFAULT NULL,
+  activity_timestamp		datetime 			NOT NULL,
+  employeeNumber		 	int			 		NOT NULL,
+  old_deptCode				int					DEFAULT NULL,
+  new_deptCode				int					DEFAULT NULL,
+  dbuser 					varchar(45)	 		DEFAULT NULL,
+  latest_audituser 			varchar(45) 		DEFAULT NULL,
+  latest_authorizinguser	varchar(45) 		DEFAULT NULL,
+  latest_activityreason	 	varchar(45) 		DEFAULT NULL,
+  latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
+  PRIMARY KEY (employeeNumber,activity_timestamp)
+);

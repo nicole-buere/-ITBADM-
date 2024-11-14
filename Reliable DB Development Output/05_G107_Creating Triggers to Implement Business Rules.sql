@@ -987,6 +987,43 @@ CREATE TRIGGER inventory_managers_BEFORE_DELETE BEFORE DELETE ON inventory_manag
 END $$
 DELIMITER ;
 
+-- audit table triggers for non_salesrepresentatives (TAN)
+DROP TRIGGER IF EXISTS non_salesrepresentatives_AFTER_INSERT;
+DELIMITER $$
+CREATE	TRIGGER non_salesrepresentatives_AFTER_INSERT AFTER INSERT ON non_salesrepresentatives FOR EACH ROW BEGIN
+	INSERT INTO audit_non_salesrepresentatives VALUES
+		('C', NOW(), new.employeeNumber,
+		  NULL,
+		  new.deptCode,
+          USER(), 
+          new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS non_salesrepresentatives_AFTER_UPDATE;
+DELIMITER $$
+CREATE TRIGGER non_salesrepresentatives_AFTER_UPDATE AFTER UPDATE ON non_salesrepresentatives FOR EACH ROW BEGIN
+	INSERT INTO audit_non_salesrepresentatives VALUES
+		('U', NOW(), new.employeeNumber,
+		  old.deptCode,
+		  new.deptCode,
+          USER(), new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS non_salesrepresentatives_BEFORE_DELETE;
+DELIMITER $$
+CREATE TRIGGER non_salesrepresentatives_BEFORE_DELETE BEFORE DELETE ON non_salesrepresentatives FOR EACH ROW BEGIN
+	INSERT INTO audit_non_salesrepresentatives VALUES
+		('D', NOW(), old.employeeNumber,
+		  NULL,
+		  old.deptCode,
+          USER(), NULL, NULL, NULL, NULL);
+END $$
+DELIMITER ;
+
 -- 4C.F (KRUEGER)
 DROP TRIGGER IF EXISTS employees_AFTER_UPDATE;
 DELIMITER $$

@@ -258,6 +258,11 @@ BEGIN
     FROM orders
     WHERE orders.orderNumber = OLD.orderNumber;
 
+    IF var_status = 'Completed' THEN
+        SET errormessage = 'No modifications are allowed for completed orders';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
+
     -- Condition 1: If the order is "Shipped", allow only referenceNo updates
     IF var_status = 'Shipped' THEN
         IF NOT ((NEW.referenceNo <> OLD.referenceNo OR (OLD.referenceNo IS NULL AND NEW.referenceNo IS NOT NULL)) 

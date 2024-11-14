@@ -422,8 +422,6 @@ CREATE TABLE audit_customers (
   old_creditLimit			double				DEFAULT NULL,
   old_officeCode			varchar(10)			DEFAULT NULL,
   old_startDate				date				DEFAULT NULL,
-  old_latest_audituser		varchar(45)			DEFAULT NULL,
-  old_latest_activityreason varchar(100)		DEFAULT NULL,
   new_customerName			varchar(50)			DEFAULT NULL,
   new_contactLastName		varchar(50)			DEFAULT NULL,
   new_contactFirstName		varchar(50)			DEFAULT NULL,
@@ -438,12 +436,35 @@ CREATE TABLE audit_customers (
   new_creditLimit			double				DEFAULT NULL,
   new_officeCode			varchar(10)			DEFAULT NULL,
   new_startDate				date				DEFAULT NULL,
-  new_latest_audituser		varchar(45)			DEFAULT NULL,
-  new_latest_activityreason varchar(100)		DEFAULT NULL,
   dbuser 					varchar(45)	 		DEFAULT NULL,
   latest_audituser 			varchar(45) 		DEFAULT NULL,
   latest_authorizinguser	varchar(45) 		DEFAULT NULL,
   latest_activityreason	 	varchar(45) 		DEFAULT NULL,
   latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
   PRIMARY KEY (customerNumber,activity_timestamp)
+);
+
+-- alter departments to include columns used for audit (TAN)
+ALTER TABLE departments
+  ADD COLUMN latest_audituser 			varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_authorizinguser 	varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activityreason 		varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activitymethod 		enum('W','M','D') DEFAULT NULL;
+  
+-- audit table for departments (TAN)
+DROP TABLE IF EXISTS audit_departments;
+CREATE TABLE audit_departments (
+  activity 					enum('C','U','D') 	DEFAULT NULL,
+  activity_timestamp		datetime 			NOT NULL,
+  deptCode		 			int			 		NOT NULL,
+  old_deptName				varchar(45)		 	DEFAULT NULL,
+  old_deptManagerNumber		int					DEFAULT NULL,
+  new_deptName				varchar(45)		 	DEFAULT NULL,
+  new_deptManagerNumber		int					DEFAULT NULL,
+  dbuser 					varchar(45)	 		DEFAULT NULL,
+  latest_audituser 			varchar(45) 		DEFAULT NULL,
+  latest_authorizinguser	varchar(45) 		DEFAULT NULL,
+  latest_activityreason	 	varchar(45) 		DEFAULT NULL,
+  latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
+  PRIMARY KEY (deptCode,activity_timestamp)
 );

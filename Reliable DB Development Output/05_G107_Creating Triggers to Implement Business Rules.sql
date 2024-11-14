@@ -910,3 +910,40 @@ CREATE TRIGGER customers_BEFORE_DELETE BEFORE DELETE ON customers FOR EACH ROW B
           USER(), NULL, NULL, NULL, NULL);
 END $$
 DELIMITER ;
+
+-- audit table triggers for departments (TAN)
+DROP TRIGGER IF EXISTS departments_AFTER_INSERT;
+DELIMITER $$
+CREATE	TRIGGER departments_AFTER_INSERT AFTER INSERT ON departments FOR EACH ROW BEGIN
+	INSERT INTO audit_departments VALUES
+		('C', NOW(), new.deptCode,
+		  NULL, NULL,
+		  new.deptName, new.deptManagerNumber,
+          USER(), 
+          new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS departments_AFTER_UPDATE;
+DELIMITER $$
+CREATE TRIGGER departments_AFTER_UPDATE AFTER UPDATE ON departments FOR EACH ROW BEGIN
+	INSERT INTO audit_departments VALUES
+		('U', NOW(), new.deptCode,
+		  old.deptName, old.deptManagerNumber,
+		  new.deptName, new.deptManagerNumber,
+          USER(), new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS departments_BEFORE_DELETE;
+DELIMITER $$
+CREATE TRIGGER departments_BEFORE_DELETE BEFORE DELETE ON departments FOR EACH ROW BEGIN
+	INSERT INTO audit_departments VALUES
+		('D', NOW(), old.deptCode,
+		  NULL, NULL,
+		  old.deptName, old.deptManagerNumber,
+          USER(), NULL, NULL, NULL, NULL);
+END $$
+DELIMITER ;

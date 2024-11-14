@@ -287,10 +287,37 @@ ADD CONSTRAINT `FK90_002`
   ON DELETE RESTRICT
   ON UPDATE RESTRICT;
 
-
 -- alter discontinued products to include columns used for audit
 ALTER TABLE discontinued_products
   ADD COLUMN latest_audituser 			varchar(45) DEFAULT NULL,
   ADD COLUMN latest_authorizinguser 	varchar(45) DEFAULT NULL,
   ADD COLUMN latest_activityreason 		varchar(45) DEFAULT NULL,
   ADD COLUMN latest_activitymethod 		enum('W','M','D') DEFAULT NULL;
+  
+  
+-- alter banks to include columns used for audit (TAN)
+ALTER TABLE banks
+  ADD COLUMN latest_audituser 			varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_authorizinguser 	varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activityreason 		varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activitymethod 		enum('W','M','D') DEFAULT NULL;
+  
+-- audit table for banks (TAN)
+DROP TABLE IF EXISTS audit_banks;
+CREATE TABLE audit_banks (
+  activity 					enum('C','U','D') 	DEFAULT NULL,
+  activity_timestamp		datetime 			NOT NULL,
+  bank 						int 		NOT NULL,
+  old_bankname				varchar(45)			DEFAULT NULL,
+  old_branch				varchar(45)			DEFAULT NULL,
+  old_branchaddress			varchar(45)			DEFAULT NULL,
+  new_bankname				varchar(45)			DEFAULT NULL,
+  new_branch				varchar(45)			DEFAULT NULL,
+  new_branchaddress			varchar(45)			DEFAULT NULL,
+  dbuser 					varchar(45)	 		DEFAULT NULL,
+  latest_audituser 			varchar(45) 		DEFAULT NULL,
+  latest_authorizinguser	varchar(45) 		DEFAULT NULL,
+  latest_activityreason	 	varchar(45) 		DEFAULT NULL,
+  latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
+  PRIMARY KEY (productCode,activity_timestamp)
+);

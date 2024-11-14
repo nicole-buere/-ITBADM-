@@ -434,12 +434,6 @@ END$$
 
 DELIMITER ;
 
--- PART4D (PEGALAN)
-
-ALTER TABLE customers
-ADD COLUMN latest_audituser VARCHAR(45) DEFAULT NULL,
-ADD COLUMN latest_activityreason VARCHAR(100) DEFAULT NULL;
-
 
 DROP EVENT IF EXISTS update_credit_limits;
 DELIMITER $$

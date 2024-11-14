@@ -875,3 +875,44 @@ CREATE TRIGGER credit_payments_BEFORE_DELETE BEFORE DELETE ON credit_payments FO
           USER(), NULL, NULL, NULL, NULL);
 END $$
 DELIMITER ;
+
+-- audit table triggers for customers table (TAN)
+DROP TRIGGER IF EXISTS customers_AFTER_INSERT;
+DELIMITER $$
+CREATE	TRIGGER customers_AFTER_INSERT AFTER INSERT ON customers FOR EACH ROW BEGIN
+	INSERT INTO audit_customers VALUES
+		('C', NOW(), new.customerNumber, 
+		  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
+		  new.customerName, new.contactLastName, new.contactFirstName, new.phone, new.addressLine1, new.addressLine2, new.city, 
+          new.state, new.postalCode, new.country, new.salesRepEmployeeNumber, new.creditLimit, new.officeCode, new.startDate,
+          USER(), 
+          new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS customers_AFTER_UPDATE;
+DELIMITER $$
+CREATE TRIGGER customers_AFTER_UPDATE AFTER UPDATE ON customers FOR EACH ROW BEGIN
+	INSERT INTO audit_customers VALUES
+		('U', NOW(), new.customerNumber,
+		  old.customerName, old.contactLastName, old.contactFirstName, old.phone, old.addressLine1, old.addressLine2, old.city, 
+          old.state, old.postalCode, old.country, old.salesRepEmployeeNumber, old.creditLimit, old.officeCode, old.startDate,
+          new.customerName, new.contactLastName, new.contactFirstName, new.phone, new.addressLine1, new.addressLine2, new.city, 
+          new.state, new.postalCode, new.country, new.salesRepEmployeeNumber, new.creditLimit, new.officeCode, new.startDate,
+          USER(), new.latest_audituser, new.latest_authorizinguser,
+          new.latest_activityreason, new.latest_activitymethod);
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS customers_BEFORE_DELETE;
+DELIMITER $$
+CREATE TRIGGER customers_BEFORE_DELETE BEFORE DELETE ON customers FOR EACH ROW BEGIN
+	INSERT INTO audit_customers VALUES
+		('D', NOW(), old.customerNumber,
+		  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
+		  old.customerName, old.contactLastName, old.contactFirstName, old.phone, old.addressLine1, old.addressLine2, old.city, 
+          old.state, old.postalCode, old.country, old.salesRepEmployeeNumber, old.creditLimit, old.officeCode, old.startDate,
+          USER(), NULL, NULL, NULL, NULL);
+END $$
+DELIMITER ;

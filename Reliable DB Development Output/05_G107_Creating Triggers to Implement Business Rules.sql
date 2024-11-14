@@ -464,6 +464,7 @@ END$$
 
 DELIMITER ;
 
+-- PART 4.D
 
 DROP EVENT IF EXISTS update_credit_limits;
 DELIMITER $$
@@ -520,7 +521,6 @@ END $$
 DELIMITER ;
 
 -- PART 4C.D
--- Part 4C.D
 ALTER TABLE salesrepassignments
 ADD COLUMN quota_utilized DECIMAL(10, 2) DEFAULT 0,
 ADD COLUMN reassigned_by VARCHAR(50) DEFAULT NULL;

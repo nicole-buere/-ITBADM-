@@ -187,7 +187,6 @@ CREATE TABLE quantity_ordered_reports (
     quantityOrdered     INT,
     PRIMARY KEY (entryid),                       -- Use entryid as the primary key
     FOREIGN KEY (reportid) REFERENCES reports_inventory(reportid),  -- Reference to reports_inventory
-    INDEX(reportid)
 );
 
 DROP PROCEDURE IF EXISTS generate_quantity_ordered_report;

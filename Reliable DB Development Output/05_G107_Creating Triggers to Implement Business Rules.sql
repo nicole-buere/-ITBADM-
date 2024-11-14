@@ -468,26 +468,15 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS procedure_update_credit_limits;
 DELIMITER $$
 
+
 CREATE PROCEDURE procedure_update_credit_limits(IN p_year INT, IN p_month INT)
 BEGIN
-    -- Declare a variable to hold the audit user
-    DECLARE audit_user VARCHAR(100);
-    DECLARE activity_reason VARCHAR(200);
-
-    -- Set the audit user to the current user
-    SET audit_user = CURRENT_USER();
-
-    -- Check if the user is root@localhost and adjust accordingly
-    IF audit_user = 'root@localhost' THEN
-        SET audit_user = 'System';
-        SET activity_reason = 'System generated monthly reassessment of credit limit';
-    ELSE
-        SET activity_reason = 'Monthly reassessment of credit limit';
-    END IF;
-
+	-- Get the month name from the month number
+    SET @month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
+    
     -- Update credit limits based on total order amount for each customer in the given month and year
     UPDATE customers c
-    LEFT JOIN (
+    JOIN (
         SELECT 
             o.customerNumber, 
             SUM(od.quantityOrdered * od.priceEach) AS customerTotalAmount
@@ -502,49 +491,50 @@ BEGIN
             o.customerNumber
     ) AS customerOrders ON c.customerNumber = customerOrders.customerNumber
     SET 
-        c.creditLimit = IFNULL(customerOrders.customerTotalAmount * 2, 0),
-        c.latest_audituser = audit_user,
-        c.latest_activityreason = activity_reason;
+        c.creditLimit = customerOrders.customerTotalAmount * 2;
 
     -- Additional credit for customers with more than 15 orders in the given month and year
     UPDATE customers c
-    JOIN (
-        SELECT 
-            o.customerNumber, 
-            MAX(od.quantityOrdered * od.priceEach) AS maxOrderAmount
-        FROM 
-            orders o
-        JOIN 
-            orderdetails od ON o.orderNumber = od.orderNumber
-        WHERE 
-            MONTH(o.orderDate) = p_month
-            AND YEAR(o.orderDate) = p_year
-        GROUP BY 
-            o.customerNumber
+    SET c.creditLimit = c.creditLimit + (
+        SELECT MAX(od.quantityOrdered * od.priceEach)
+        FROM orders o
+        JOIN orderdetails od ON o.orderNumber = od.orderNumber
+        WHERE o.customerNumber = c.customerNumber
+        AND MONTH(o.orderDate) = p_month
+        AND YEAR(o.orderDate) = p_year
+    )
+    WHERE c.customerNumber IN (
+        SELECT o.customerNumber
+        FROM orders o
+        WHERE MONTH(o.orderDate) = p_month
+        AND YEAR(o.orderDate) = p_year
+        GROUP BY o.customerNumber
         HAVING COUNT(*) > 15
-    ) AS extraCredit ON c.customerNumber = extraCredit.customerNumber
-    SET 
-        c.creditLimit = c.creditLimit + extraCredit.maxOrderAmount,
-        c.latest_audituser = audit_user,
-        c.latest_activityreason = CONCAT(activity_reason, ': additional credit for high order count');
-
-END$$
+    );
+END $$
 
 DELIMITER ;
 
 
+
+
+
 -- Create the event to run every 30 days and call the procedure
 DROP EVENT IF EXISTS event_update_credit_limits;
+
 DELIMITER $$
 
 CREATE EVENT event_update_credit_limits
 ON SCHEDULE EVERY 30 DAY
 STARTS '2024-10-31 00:00:00'
 DO
-CALL procedure_update_credit_limits(YEAR(CURDATE()), MONTH(CURDATE()));
-
+    CALL procedure_update_credit_limits(2004, 11);
 $$
+
 DELIMITER ;
+
+
+
 
 GRANT EXECUTE ON PROCEDURE `dbsalesv2.0`.`procedure_update_credit_limits` TO systemmodule;
 

@@ -76,7 +76,7 @@ END $$
 DELIMITER ;
 
 -- TRIGGERS ON ORDERS
-
+-- 4A.A
 DROP TRIGGER IF EXISTS orders_BEFORE_INSERT;
 DELIMITER $$
 CREATE TRIGGER `orders_BEFORE_INSERT` BEFORE INSERT ON `orders` FOR EACH ROW BEGIN
@@ -90,7 +90,7 @@ CREATE TRIGGER `orders_BEFORE_INSERT` BEFORE INSERT ON `orders` FOR EACH ROW BEG
 		SET errormessage = CONCAT("Required Data cannot be less than 3 days from the Order Date of ", new.orderdate);
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
-    SET new.status = "In-Prcoess";
+    SET new.status = "In-Process";
     IF (new.shippeddate IS NOT NULL) THEN
 		SET errormessage = CONCAT("The order is a new order with ordernumber - ", new.ordernumber, " and it should not have a shipped date yet");
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
@@ -105,36 +105,51 @@ CREATE TRIGGER `orders_BEFORE_INSERT` BEFORE INSERT ON `orders` FOR EACH ROW BEG
 END $$
 DELIMITER ;
 
+-- 4A.C 
 DROP TRIGGER IF EXISTS orders_BEFORE_UPDATE;
 DELIMITER $$
 CREATE TRIGGER `orders_BEFORE_UPDATE` BEFORE UPDATE ON `orders` FOR EACH ROW BEGIN
 	DECLARE errormessage	VARCHAR(200);
     
+    -- Prevents updating order number
     IF (new.ordernumber != old.ordernumber) THEN
 		SET errormessage = CONCAT("Order Number  ", old.ordernumber, " cannot be updated to a new value of ", new.ordernumber);
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
     
-    -- Check if the updated orderdate is before the original orderdate
-    IF (new.orderdate < old.orderdate) THEN
-		SET errormessage = CONCAT("Updated orderdate cannot be less than the origianl date of ", old.orderdate);
+    -- Prevents updating order date
+    IF (new.orderdate != old.orderdate) THEN
+		SET errormessage = CONCAT("Order Date ", old.orderdate, " cannot be updated to a new value of ", new.orderdate);
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
     
+    -- Prevents updating shipped date
+    IF (new.shippeddate != old.shippeddate) THEN
+		SET errormessage = CONCAT("Shipped Date ", old.shippeddate, " cannot be updated to a new value of ", new.shippeddate);
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
+    
+    -- Prevents updating customer number
+	IF (new.customernumber != old.customernumber) THEN
+		SET errormessage = CONCAT("Customer Number ", old.customernumber, " cannot be updated to a new value of ", new.customernumber);
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
+
+    -- Checks if updated Required Date is not less than 3 days from the order date    
     IF (TIMESTAMPDIFF(DAY, new.orderdate, new.requireddate) < 3) THEN
-		SET errormessage = CONCAT("Required Data cannot be less than 3 days from the Order Date of ", new.orderdate);
+		SET errormessage = CONCAT("Required Date cannot be less than 3 days from the Order Date of ", new.orderdate);
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
     
-        -- Check for the precense of customer
+	-- Check for the presence of customer
     IF (new.customernumber IS NULL) THEN
 		SET errormessage = CONCAT("Order number ", new.ordernumber, " cannot be updated without a customer");
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
 
     -- Check valid status transitions (preventing status reversion)
-    IF NOT isValidStatus(old.status, new.status) THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid status transition: Status can only progress forward, not backward.';
+     IF NOT isValidStatus(OLD.status, NEW.status) THEN
+        SET NEW.status = OLD.status;
     END IF;
     
     -- Set shipped date when status is 'Shipped'
@@ -152,34 +167,13 @@ CREATE TRIGGER `orders_BEFORE_UPDATE` BEFORE UPDATE ON `orders` FOR EACH ROW BEG
         SET new.comments = CONCAT(old.comments, '\n', new.comments);
     END IF;
 
+    -- 4A.E
     -- check if order was cancelled (edited by Josef)
 	IF(old.status = "Cancelled") THEN
 		SET errormessage = "Cannot modify cancelled orders";
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
-    
-    IF (new.ordernumber != old.ordernumber) THEN
-		SET errormessage = CONCAT("Order Number  ", old.ordernumber, " cannot be updated to a new value of ", new.ordernumber);
-		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-    END IF;
-    
-    -- Check if the updated orderdate is before the original orderdate
-    IF (new.orderdate < old.orderdate) THEN
-		SET errormessage = CONCAT("Updated orderdate cannot be less than the original date of ", old.orderdate);
-		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-    END IF;
-    
-    IF (TIMESTAMPDIFF(DAY, new.orderdate, new.requireddate) < 3) THEN
-		SET errormessage = CONCAT("Required Data cannot be less than 3 days from the Order Date of ", new.orderdate);
-		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-    END IF;
-    
-        -- Check for the presence of customer
-    IF (new.customernumber IS NULL) THEN
-		SET errormessage = CONCAT("Order number ", new.ordernumber, " cannot be updated without a customer");
-		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-    END IF;
-    
+
 END $$
 DELIMITER ;
 

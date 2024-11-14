@@ -226,7 +226,7 @@ BEGIN
             -- Update the product inventory by returning the ordered quantity
             UPDATE current_products
             SET quantityInStock = quantityInStock + var_quantityOrdered,
-				latest_audituser = USER(),
+				latest_audituser = 'SYSTEM',
                 latest_authorizinguser = 'SYSTEM',
                 latest_activityreason = 'Order was cancelled',
                 latest_activitymethod = 'W'

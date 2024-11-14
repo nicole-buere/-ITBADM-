@@ -12,6 +12,7 @@ WHERE orderNumber = '10428';
 
 -- select current products
 SELECT * FROM `dbsalesv2.0`.current_products;
+SELECT * FROM `dbsalesv2.0`.audit_current_products;
 
 -- insert an order (should succeed)
 INSERT INTO `dbsalesv2.0`.`orders` (`orderNumber`, `orderDate`, `requiredDate`, `status`, `comments`, `customerNumber`) 
@@ -89,7 +90,7 @@ UPDATE `dbsalesv2.0`.`employees` SET `lastName` = 'TestMurphy'
 WHERE (`employeeNumber` = '1002');
 
 -- change an employee's type (should pass)
-UPDATE `dbsalesv2.0`.`employees` SET `employee_type` = 'Sales Manager' 
+UPDATE `dbsalesv2.0`.`employees` SET `employee_type` = 'Sales Representative' 
 WHERE (`employeeNumber` = '1002');
 
 -- 4C.C test script (TAN)
@@ -105,6 +106,10 @@ WHERE (`employeeNumber` = '9999');
 -- delete an employee record (should fail)
 DELETE FROM `dbsalesv2.0`.`employees` 
 WHERE (`employeeNumber` = '9999');
+
+-- insert another employee (should pass)
+INSERT INTO `dbsalesv2.0`.`employees` (`employeeNumber`, `lastName`, `firstName`, `extension`, `email`, `jobTitle`, `employee_type`, `activeRecord`) 
+VALUES ('9998', 'Test', 'Man', 'x1234', 'testmand@classicmodelcars.com', 'Sales Rep', 'Sales Representative', 'Y');
 
 -- Audit table testing
 

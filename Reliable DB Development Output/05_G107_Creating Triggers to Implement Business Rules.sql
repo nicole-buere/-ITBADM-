@@ -404,19 +404,6 @@ CREATE TRIGGER `employees_BEFORE_DELETE` BEFORE DELETE ON `employees` FOR EACH R
 END $$
 DELIMITER ;
 
--- PART 4B.D (BUERE)
-DROP TRIGGER IF EXISTS `current_product_BEFORE_UPDATE`;
-DELIMITER $$
-CREATE TRIGGER `current_product_BEFORE_UPDATE`BEFORE UPDATE ON `dbsalesV2.0`.`current_products`FOR EACH ROW BEGIN
-    DECLARE errormessage VARCHAR(200);
-    -- Check if the product type is being modified
-    IF OLD.product_type != NEW.product_type THEN
-		SET errormessage = CONCAT('Product type for ', new.productCode, ' cannot be modified from ', old.product_type, ' to ', new.product_type);
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
-    END IF;
-END$$
-DELIMITER ;
-
 -- PART 4B.B (KRUEGER)
 DROP PROCEDURE IF EXISTS addProductLine;
 DELIMITER $$
@@ -648,6 +635,13 @@ DELIMITER $$
 CREATE TRIGGER current_products_BEFORE_UPDATE BEFORE UPDATE ON current_products FOR EACH ROW BEGIN
 	DECLARE errormessage	VARCHAR(200);
 
+	-- PART 4B.D (BUERE)
+    -- Check if the product type is being modified
+    IF OLD.product_type != NEW.product_type THEN
+		SET errormessage = CONCAT('Product type for ', new.productCode, ' cannot be modified from ', old.product_type, ' to ', new.product_type);
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+    END IF;
+
 	-- if there the current_product is attempting to be moved to discontinued but there is no discontinuing_manager
 	IF(old.current_status = 'C' AND new.current_status = 'D' AND new.discontinuing_manager IS NULL) THEN
 		SET errormessage = CONCAT("The current product ", new.productCode, " needs a inventory manager to discontinue it");
@@ -675,10 +669,6 @@ CREATE TRIGGER current_products_BEFORE_UPDATE BEFORE UPDATE ON current_products 
 	IF(old.current_status = 'D' AND new.current_status = 'C') THEN
 		DELETE FROM discontinued_products
         WHERE productCode = new.productCode;
-        
-		UPDATE current_products
-			SET discontinuing_manager = NULL, discontinue_reason = NULL
-		WHERE productCode = new.productCode;
         
 		UPDATE products
 			SET product_category = 'C', latest_audituser = 'SYSTEM', latest_authorizinguser = 'SYSTEM',

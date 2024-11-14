@@ -87,8 +87,17 @@ END $$
 DELIMITER ;
 
 -- PART 4B.C (PEGALAN)
-GRANT EXECUTE ON FUNCTION getMSRP TO salesmodule, inventorymodule, paymentmodule;
 
+DROP VIEW IF EXISTS view_product_msrp;
+CREATE VIEW view_product_msrp AS
+SELECT 
+    p.productCode,
+    p.productName,
+    getMSRP(p.productCode) AS msrp
+FROM 
+    products p;
+
+GRANT SELECT ON view_product_msrp TO salesmodule, inventorymodule, paymentmodule;
 -- Create a function that checks for the valid values of status
 -- 4A.C
 DROP FUNCTION IF EXISTS isStatusValid;

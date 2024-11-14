@@ -3060,9 +3060,8 @@ DELIMITER $$
 CREATE EVENT auto_cancel_unshipped_orders
 ON SCHEDULE EVERY 1 DAY
 DO
-CALL procedure_auto_cancel_unshipped_orders();
-END $$
-DELIMITER ;
+    CALL procedure_auto_cancel_unshipped_orders();
+
 
 
 SELECT * from orders;
@@ -3467,6 +3466,8 @@ CREATE TABLE turnaroundtime_reports (
     country             VARCHAR(100),
     office              VARCHAR(100),
     AVERAGETURNAROUND   DECIMAL(9,2),
+    generationdate      DATETIME,                -- The date when the report was generated
+    generatedby         VARCHAR(100),            -- Who generated the report
     PRIMARY KEY (entryid)                       -- Use entryid as the primary key
 );
 
@@ -3486,14 +3487,16 @@ BEGIN
     SET v_month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
     
     -- Insert summarized turnaround time report data into turnaroundtime_reports table using the generated report id
-    INSERT INTO turnaroundtime_reports (reportid, reportyear, reportmonth, country, office, AVERAGETURNAROUND)
+    INSERT INTO turnaroundtime_reports (reportid, reportyear, reportmonth, country, office, AVERAGETURNAROUND, generationdate, generatedby)
     SELECT  
         v_reportid AS reportid,
         p_year AS reportyear,
         p_month AS reportmonth,
         ofc.country,
         ofc.officeCode AS office,
-        AVG(TIMESTAMPDIFF(DAY, o.orderdate, o.shippeddate)) AS AVERAGETURNAROUND
+        AVG(TIMESTAMPDIFF(DAY, o.orderdate, o.shippeddate)) AS AVERAGETURNAROUND,
+        NOW() AS generationdate,
+        IF(CURRENT_USER() = 'root@localhost', 'System', CURRENT_USER()) AS generatedby
     FROM    
         orders o
         JOIN customers c ON o.customerNumber = c.customerNumber
@@ -3517,7 +3520,6 @@ BEGIN
 
 END $$
 DELIMITER ;
-
 
 
 
@@ -3552,6 +3554,8 @@ CREATE TABLE pricing_variation_reports (
     product_code        VARCHAR(15),
     product_line        VARCHAR(50),
     pricevariation      DECIMAL(9,2),
+    generationdate      DATETIME,                -- The date when the report was generated
+    generatedby         VARCHAR(100),            -- Who generated the report
     PRIMARY KEY (entryid)                       -- Use entryid as the primary key
 );
 
@@ -3571,14 +3575,16 @@ BEGIN
     SET v_month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
     
     -- Insert summarized pricing variation data into pricing_variation_reports table using the generated report id
-    INSERT INTO pricing_variation_reports (reportid, reportyear, reportmonth, product_code, product_line, pricevariation)
+    INSERT INTO pricing_variation_reports (reportid, reportyear, reportmonth, product_code, product_line, pricevariation, generationdate, generatedby)
     SELECT  
         v_reportid AS reportid,
         p_year AS reportyear,
         p_month AS reportmonth,
         p.productCode,
         pp.productLine,
-        ROUND(AVG(od.priceeach - getMSRP_2(p.productCode, o.orderdate)), 2) AS pricevariation
+        ROUND(AVG(od.priceeach - getMSRP_2(p.productCode, o.orderdate)), 2) AS pricevariation,
+        NOW() AS generationdate,
+        IF(CURRENT_USER() = 'root@localhost', 'System', CURRENT_USER()) AS generatedby
     FROM    
         orders o
         JOIN orderdetails od ON o.orderNumber = od.orderNumber
@@ -3602,6 +3608,7 @@ BEGIN
 
 END $$
 DELIMITER ;
+
 
 
 -- Create an event to generate the pricing variation report every month

@@ -46,7 +46,7 @@ CREATE TRIGGER `orderdetails_AFTER_INSERT` AFTER INSERT ON `orderdetails` FOR EA
 	UPDATE current_products SET quantityInStock = quantityInStock - new.quantityOrdered WHERE productCode = new.productCode;
     
 	INSERT INTO audit_orderdetails VALUES
-		('C', NOW(), new.orderNumber, new.productCode, NULL, NULL, NULL, NULL, NULL, NULL,
+		('C', NOW(), new.orderNumber, new.productCode, NULL, NULL, NULL, NULL,
 		  new.quantityOrdered, new.priceEach, new.orderLineNumber, 
           new.referenceNo,
           USER(), 
@@ -343,7 +343,7 @@ BEGIN
     END IF;
 
 	INSERT INTO audit_orderdetails VALUES
-		('D', NOW(), old.orderNumber, old.productCode, NULL, NULL, NULL, NULL, NULL, NULL,
+		('D', NOW(), old.orderNumber, old.productCode, NULL, NULL, NULL, NULL,
         old.quantityOrdered, old.priceEach, 
 		old.orderLineNumber, old.referenceNo,
 		USER(), NULL, NULL, NULL, NULL);

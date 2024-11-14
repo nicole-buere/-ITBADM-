@@ -90,7 +90,7 @@ DELIMITER ;
 GRANT EXECUTE ON FUNCTION getMSRP TO salesmodule, inventorymodule, paymentmodule;
 
 -- Create a function that checks for the valid values of status
-
+-- 4A.C
 DROP FUNCTION IF EXISTS isStatusValid;
 DELIMITER $$
 CREATE FUNCTION isStatusValid (param_status VARCHAR(15))
@@ -124,40 +124,43 @@ BEGIN
 		SET errormessage := CONCAT("Either ", param_oldstatus, " or ", param_newstatus, " is not a valid status");
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;	
     END IF;
-        
+
+    -- Check if transition is In Process to Shipped    
     IF (param_oldstatus = "In Process") THEN
 		IF (param_newstatus != "Shipped") THEN
 			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
 			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;		
         END IF;	
+
+    -- Shipped to In Process or Resolved should not be allowed
 	ELSEIF (param_oldstatus = "Shipped") THEN
 		IF (param_newstatus = "In Process") OR ( param_newstatus = "Resolved") THEN
 			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
 			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;		
         END IF;	
     
-    -- from Shipped to Disputed or Completed
+    -- Check if transition is Shipped to Disputed or Shipped to Completed
 	ELSEIF (param_oldstatus = 'Shipped') THEN
 		IF (param_newstatus != 'Disputed' AND param_newstatus != 'Completed') THEN
 			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
 			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
 		END IF;
         
-	-- from Disputed to Resolved
+	-- Check if transition is Disputed to Resolved
 	ELSEIF (param_oldstatus = 'Disputed') THEN
 		IF (param_newstatus != 'Resolved') THEN
 			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
 			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
 		END IF;
         
-	-- from Resolved  to Completed
+	-- Check if transition is Resolved  to Completed
 	ELSEIF (param_oldstatus = 'Resolved') THEN
 		IF (param_newstatus != 'Completed') THEN
 			SET errormessage := CONCAT("Status from ", param_oldstatus, " to ", param_newstatus, " is not allowed");
 			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
 		END IF;
 	
-	-- Completed should not allow any further changes
+	-- Completed status should not allow any further changes
 	ELSEIF (param_oldstatus = 'Completed') THEN
 		SET errormessage := 'No status changes are allowed once the order is completed.';
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;

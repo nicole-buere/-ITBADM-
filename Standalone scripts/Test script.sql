@@ -85,4 +85,14 @@ WHERE (`productCode` = 'S10_1678');
 UPDATE `dbsalesv2.0`.`current_products` SET `current_status` = 'C' 
 WHERE (`productCode` = 'S10_1678');
 
+-- Audit table testing
 
+SELECT * FROM `dbsalesv2.0`.banks;
+SELECT * FROM `dbsalesv2.0`.audit_banks;
+
+INSERT INTO `dbsalesv2.0`.`banks` (`bank`, `bankname`, `branch`, `branchaddress`, `latest_audituser`, `latest_authorizinguser`, `latest_activityreason`, `latest_activitymethod`) 
+VALUES ('2', 'a', 'b', 'c', 'Aaron', 'Carl', 'fun', 'D');
+
+UPDATE `dbsalesv2.0`.`banks` SET `bankname` = 'c' WHERE (`bank` = '2');
+
+DELETE FROM `dbsalesv2.0`.`banks` WHERE (`bank` = '2');

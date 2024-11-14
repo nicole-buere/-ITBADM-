@@ -1,16 +1,3 @@
-DROP TABLE IF EXISTS reports_inventory;
-CREATE TABLE reports_inventory (
-    inv_reportid    INT(10) AUTO_INCREMENT,    -- Unique identifier for each entry in reports_inventory
-    reportid        INT(10),                   -- Reference to the specific report's reportid (e.g., sales_reports)
-    generationdate  DATETIME,                  -- Date and time the report was generated
-    generatedby     VARCHAR(100),              -- Who generated the report
-    reportdesc      VARCHAR(100),              -- Description of the report
-    reporttable     VARCHAR(50),               -- Name of the report table (e.g., 'Sales, Discounts, and Markups', 'Quantity Ordered', etc.)
-    PRIMARY KEY (inv_reportid),                -- Primary key for the reports_inventory table
-    UNIQUE(reportid, reporttable)              -- Ensures uniqueness for report reference in specific report tables
-);
-
-
 -- Create a Special getMSRP
 DROP FUNCTION IF EXISTS getMSRP_2;
 DELIMITER $$
@@ -87,6 +74,8 @@ CREATE TABLE sales_reports (
     reportyear          INT(4),
     reportmonth         INT(2),
     generationdate      DATETIME,                -- Date when the report was generated
+    generatedby         VARCHAR(100),            -- Who generated the report
+    reportdesc          VARCHAR(200),            -- Description of the report
     productCode         VARCHAR(15),
     productLine         VARCHAR(50),
     employeeLastName    VARCHAR(50),
@@ -99,6 +88,7 @@ CREATE TABLE sales_reports (
     MARKUP              DECIMAL(9,2),
     PRIMARY KEY (reportid, productCode, officeCode, employeeLastName, employeeFirstName, orderDate)  -- Composite primary key
 );
+
 
 DROP PROCEDURE IF EXISTS generate_sales_report;
 DELIMITER $$
@@ -113,17 +103,15 @@ BEGIN
     -- Get the month name from the month number
     SET @month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
     
-    -- Insert a record into reports_inventory for tracking with the generated report id
-    INSERT INTO reports_inventory (inv_reportid, reportid, generationdate, generatedby, reportdesc, reporttable)
-    VALUES (NULL, v_reportid, NOW(), CURRENT_USER(), CONCAT('Sales, Markups, and Discounts Summary Report for ', @month_name, ' ', p_year), 'Sales, Markups, and Discounts');
-
     -- Insert summarized monthly report data into sales_reports table using the generated report id
-    INSERT INTO sales_reports (reportid, reportyear, reportmonth, generationdate, productCode, productLine, employeeLastName, employeeFirstName, country, officeCode, orderDate, sales, discount, markup)
+    INSERT INTO sales_reports (reportid, reportyear, reportmonth, generationdate, generatedby, reportdesc, productCode, productLine, employeeLastName, employeeFirstName, country, officeCode, orderDate, sales, discount, markup)
     SELECT  
         v_reportid AS reportid,
         p_year AS reportyear,
         p_month AS reportmonth,
         NOW() AS generationdate,
+        IF(CURRENT_USER() = 'root@localhost', 'System', CURRENT_USER()) AS generatedby,
+        CONCAT('Sales, Markups, and Discounts Summary Report for ', @month_name, ' ', p_year) AS reportdesc,
         p.productCode,
         pp.productLine,
         e.lastName,
@@ -156,22 +144,23 @@ DELIMITER ;
 
 
 
+
 DROP EVENT IF EXISTS generate_monthly_sales_report;
 DELIMITER $$
+
 CREATE EVENT generate_monthly_sales_report
-ON SCHEDULE EVERY 5 SECOND
+ON SCHEDULE EVERY 30 DAY
 STARTS '2024-10-31 00:00:00'
 DO
 BEGIN
-    CALL generate_sales_report(YEAR(CURDATE()), MONTH(CURDATE()));
+	 CALL generate_sales_report(YEAR(CURDATE()), MONTH(CURDATE()));
+    -- CALL generate_sales_report(2003,9);
 END$$
 DELIMITER ;
 
 
 
--- CALL generate_sales_report(2003,9);
 -- SELECT * FROM sales_reports ORDER BY reportid DESC;
--- SELECT * FROM reports_inventory ORDER BY inv_reportid DESC;
 -- SELECT * FROM orders;
 
 
@@ -188,7 +177,9 @@ CREATE TABLE quantity_ordered_reports (
     officeCode          VARCHAR(10),
     salesRepNumber      INT,
     quantityOrdered     INT,
-    generationdate      DATETIME,               
+    generationdate      DATETIME,                -- Date and time the report was generated
+    generatedby         VARCHAR(100),            -- Who generated the report
+    reportdesc          VARCHAR(200),            -- Description of the report
     PRIMARY KEY (reportid, productCode, officeCode, salesRepNumber)  -- Composite primary key
 );
 
@@ -205,23 +196,21 @@ BEGIN
     -- Get the month name from the month number
     SET @month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
 
-    -- Insert a record into reports_inventory for tracking
-    INSERT INTO reports_inventory (reportid, generationdate, generatedby, reportdesc, reporttable)
-    VALUES (v_reportid, NOW(), CURRENT_USER(), CONCAT('Quantity Ordered Report for ', @month_name, ' ', p_year), 'Quantity Ordered');
-
     -- Insert summarized monthly report data into quantity_ordered_reports table using the generated report id
-    INSERT INTO quantity_ordered_reports (reportid, reportyear, reportmonth, productLine, productCode, country, officeCode, salesRepNumber, quantityOrdered, generationdate)
+    INSERT INTO quantity_ordered_reports (reportid, reportyear, reportmonth, generationdate, generatedby, reportdesc, productLine, productCode, country, officeCode, salesRepNumber, quantityOrdered)
     SELECT  
         v_reportid AS reportid,
         p_year AS reportyear,
         p_month AS reportmonth,
+        NOW() AS generationdate,
+        IF(CURRENT_USER() = 'root@localhost', 'System', CURRENT_USER()) AS generatedby,
+        CONCAT('Quantity Ordered Report for ', @month_name, ' ', p_year) AS reportdesc,
         pp.productLine,
         p.productCode,
         ofc.country,
         ofc.officeCode,
         sr.employeeNumber AS salesRepNumber,
-        SUM(IFNULL(od.quantityOrdered, 0)) AS quantityOrdered,
-        NOW() AS generationdate
+        SUM(IFNULL(od.quantityOrdered, 0)) AS quantityOrdered
     FROM    
         orders o
         JOIN orderdetails od ON o.orderNumber = od.orderNumber
@@ -252,30 +241,27 @@ STARTS '2024-10-31 00:00:00'
 DO
 BEGIN
     CALL generate_quantity_ordered_report(YEAR(CURDATE()), MONTH(CURDATE()));
+    -- CALL generate_quantity_ordered_report(2004, 11);
 END $$
 DELIMITER ;
 
 
+-- Check the results in quantity_ordered_reports
+-- SELECT * FROM quantity_ordered_reports ORDER BY reportid DESC;
 
--- Manually call the procedure to test
-CALL generate_quantity_ordered_report(2003,11);
-
--- Check the results in reports_inventory and quantity_ordered_reports
-SELECT * FROM quantity_ordered_reports ORDER BY reportid DESC;
-SELECT * FROM reports_inventory ORDER BY inv_reportid DESC;
 
 -- REPORT03: Turnaround Time Report
 
 DROP TABLE IF EXISTS turnaroundtime_reports;
 CREATE TABLE turnaroundtime_reports (
     reportid            INT(10),                 -- Unique identifier for each report
+    entryid             INT(10) AUTO_INCREMENT,  -- Unique identifier for each row
     reportyear          INT(4),
     reportmonth         INT(2),
     country             VARCHAR(100),
     office              VARCHAR(100),
     AVERAGETURNAROUND   DECIMAL(9,2),
-    generationdate      DATETIME,                -- The date when the report was generated
-    PRIMARY KEY (reportid, country, office)      -- Composite primary key
+    PRIMARY KEY (entryid)                       -- Use entryid as the primary key
 );
 
 DROP PROCEDURE IF EXISTS generate_turnaroundtime_report;
@@ -284,27 +270,24 @@ DELIMITER $$
 CREATE PROCEDURE generate_turnaroundtime_report(IN p_year INT, IN p_month INT)
 BEGIN
     DECLARE v_reportid INT;
+    DECLARE v_row_count INT;
+    DECLARE v_month_name VARCHAR(20);
 
-    -- Generate a new report id by incrementing the maximum report id found in turnaroundtime_reports table
+    -- Generate a new report id for turnaroundtime_reports by incrementing the maximum report id found in the turnaroundtime_reports table
     SET v_reportid = (SELECT IFNULL(MAX(reportid), 0) + 1 FROM turnaroundtime_reports);
 
     -- Get the month name from the month number
-    SET @month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
-
-    -- Insert a record into reports_inventory for tracking
-    INSERT INTO reports_inventory (reportid, generationdate, generatedby, reportdesc, reporttable)
-    VALUES (v_reportid, NOW(), CURRENT_USER(), CONCAT('Turnaround Time Report for ', @month_name, ' ', p_year), 'Turnaround Time');
-
+    SET v_month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
+    
     -- Insert summarized turnaround time report data into turnaroundtime_reports table using the generated report id
-    INSERT INTO turnaroundtime_reports (reportid, reportyear, reportmonth, country, office, AVERAGETURNAROUND, generationdate)
+    INSERT INTO turnaroundtime_reports (reportid, reportyear, reportmonth, country, office, AVERAGETURNAROUND)
     SELECT  
         v_reportid AS reportid,
         p_year AS reportyear,
         p_month AS reportmonth,
         ofc.country,
         ofc.officeCode AS office,
-        AVG(TIMESTAMPDIFF(DAY, o.orderdate, o.shippeddate)) AS AVERAGETURNAROUND,
-        NOW() AS generationdate
+        AVG(TIMESTAMPDIFF(DAY, o.orderdate, o.shippeddate)) AS AVERAGETURNAROUND
     FROM    
         orders o
         JOIN customers c ON o.customerNumber = c.customerNumber
@@ -316,27 +299,39 @@ BEGIN
         AND YEAR(o.orderdate) = p_year
     GROUP BY 
         ofc.country, ofc.officeCode;
+    
+    -- Get the number of rows inserted
+    SET v_row_count = ROW_COUNT();
+
+    -- If no rows were inserted, signal an error
+    IF v_row_count = 0 THEN
+        SET @error_message = CONCAT('No entries found for ', v_month_name, ' ', p_year);
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @error_message;
+    END IF;
 
 END $$
 DELIMITER ;
+
+
+
 
 -- Create an event to generate the turnaround time report every month
 DROP EVENT IF EXISTS generate_monthly_turnaroundtime_report;
 DELIMITER $$
 
 CREATE EVENT generate_monthly_turnaroundtime_report 
-ON SCHEDULE EVERY 5 SECOND
+ON SCHEDULE EVERY 30 DAY
 STARTS '2024-10-31 00:00:00'
 DO
 BEGIN
-    CALL generate_turnaroundtime_report(YEAR(CURDATE()), MONTH(CURDATE()));
+	CALL generate_turnaroundtime_repor(YEAR(CURDATE()), MONTH(CURDATE()));
+    -- CALL generate_turnaroundtime_report(2003,9);
 END $$
 DELIMITER ;
 
 
 -- CALL generate_turnaroundtime_report(2003,11);
 -- SELECT * FROM turnaroundtime_reports ORDER BY reportid DESC ;
--- SELECT * FROM reports_inventory ORDER BY inv_reportid DESC ;
 -- SELECT * FROM orders;
 
 
@@ -345,13 +340,13 @@ DELIMITER ;
 DROP TABLE IF EXISTS pricing_variation_reports;
 CREATE TABLE pricing_variation_reports (
     reportid            INT(10),                 -- Unique identifier for each report
+    entryid             INT(10) AUTO_INCREMENT,  -- Unique identifier for each row
     reportyear          INT(4),
     reportmonth         INT(2),
     product_code        VARCHAR(15),
     product_line        VARCHAR(50),
     pricevariation      DECIMAL(9,2),
-    generationdate      DATETIME,                
-    PRIMARY KEY (reportid, product_code)         -- Composite primary key
+    PRIMARY KEY (entryid)                       -- Use entryid as the primary key
 );
 
 DROP PROCEDURE IF EXISTS generate_pricing_variation_report;
@@ -360,27 +355,24 @@ DELIMITER $$
 CREATE PROCEDURE generate_pricing_variation_report(IN p_year INT, IN p_month INT)
 BEGIN
     DECLARE v_reportid INT;
+    DECLARE v_row_count INT;
+    DECLARE v_month_name VARCHAR(20);
 
     -- Generate a new report id by incrementing the maximum report id found in pricing_variation_reports table
     SET v_reportid = (SELECT IFNULL(MAX(reportid), 0) + 1 FROM pricing_variation_reports);
 
     -- Get the month name from the month number
-    SET @month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
+    SET v_month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
     
-    -- Insert a record into reports_inventory for tracking
-    INSERT INTO reports_inventory (reportid, generationdate, generatedby, reportdesc, reporttable)
-    VALUES (v_reportid, NOW(), CURRENT_USER(), CONCAT('Pricing Variation Report for ', @month_name, ' ', p_year), 'Pricing Variation');
-
     -- Insert summarized pricing variation data into pricing_variation_reports table using the generated report id
-    INSERT INTO pricing_variation_reports (reportid, reportyear, reportmonth, product_code, product_line, pricevariation, generationdate)
+    INSERT INTO pricing_variation_reports (reportid, reportyear, reportmonth, product_code, product_line, pricevariation)
     SELECT  
         v_reportid AS reportid,
         p_year AS reportyear,
         p_month AS reportmonth,
         p.productCode,
         pp.productLine,
-        ROUND(AVG(od.priceeach - getMSRP_2(p.productCode, o.orderdate)), 2) AS pricevariation,
-        NOW() AS generationdate
+        ROUND(AVG(od.priceeach - getMSRP_2(p.productCode, o.orderdate)), 2) AS pricevariation
     FROM    
         orders o
         JOIN orderdetails od ON o.orderNumber = od.orderNumber
@@ -392,19 +384,31 @@ BEGIN
         AND YEAR(o.orderdate) = p_year
     GROUP BY 
         p.productCode, pp.productLine;
+    
+    -- Get the number of rows inserted
+    SET v_row_count = ROW_COUNT();
+
+    -- If no rows were inserted, signal an error
+    IF v_row_count = 0 THEN
+        SET @error_message = CONCAT('No entries found for ', v_month_name, ' ', p_year);
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @error_message;
+    END IF;
+
 END $$
 DELIMITER ;
+
 
 -- Create an event to generate the pricing variation report every month
 DROP EVENT IF EXISTS generate_monthly_pricing_variation_report;
 DELIMITER $$
 
 CREATE EVENT generate_monthly_pricing_variation_report
-ON SCHEDULE EVERY 5 SECOND
+ON SCHEDULE EVERY 30 DAY
 STARTS '2024-10-31 00:00:00'
 DO
 BEGIN
     CALL generate_pricing_variation_report(YEAR(CURDATE()), MONTH(CURDATE()));
+    -- CALL generate_pricing_variation_report(2003,10);
 END $$
 DELIMITER ;
 
@@ -412,7 +416,6 @@ DELIMITER ;
 
 -- CALL generate_pricing_variation_report(2003,10);
 -- SELECT * FROM pricing_variation_reports ORDER BY reportid DESC;
--- SELECT * FROM reports_inventory ORDER BY inv_reportid DESC;
 
 
 

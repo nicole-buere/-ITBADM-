@@ -661,7 +661,7 @@ DELIMITER ;
 DROP TRIGGER IF EXISTS before_update_salesrepassignments;
 DELIMITER $$
 CREATE TRIGGER before_update_salesrepassignments BEFORE UPDATE ON salesrepassignments FOR EACH ROW BEGIN
-    --4C.E
+    -- 4C.E
     -- Restrict assignment duration to a maximum of one month
     IF NEW.endDate > DATE_ADD(NEW.startDate, INTERVAL 1 MONTH) THEN
         SIGNAL SQLSTATE '45000'

@@ -159,11 +159,12 @@ DELIMITER ;
 DROP EVENT IF EXISTS generate_monthly_sales_report;
 DELIMITER $$
 CREATE EVENT generate_monthly_sales_report
-ON SCHEDULE EVERY 30 DAY
+ON SCHEDULE EVERY 5 SECOND
 STARTS '2024-10-31 00:00:00'
 DO
 BEGIN
     CALL generate_sales_report(YEAR(CURDATE()), MONTH(CURDATE()));
+END$$
 DELIMITER ;
 
 

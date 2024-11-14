@@ -466,15 +466,12 @@ DELIMITER ;
 
 -- PART 4.D
 
-DROP EVENT IF EXISTS update_credit_limits;
+DROP PROCEDURE IF EXISTS procedure_update_credit_limits;
 DELIMITER $$
 
-CREATE EVENT update_credit_limits
-ON SCHEDULE EVERY 30 DAY
-STARTS '2024-10-31 00:00:00'
-DO
+CREATE PROCEDURE procedure_update_credit_limits(IN p_year INT, IN p_month INT)
 BEGIN
-    -- Update credit limits based on total order amount for each customer in the current month
+    -- Update credit limits based on total order amount for each customer in the given month and year
     UPDATE customers c
     LEFT JOIN (
         SELECT 
@@ -485,8 +482,8 @@ BEGIN
         JOIN 
             orderdetails od ON o.orderNumber = od.orderNumber
         WHERE 
-            MONTH(o.orderDate) = MONTH(CURDATE())
-            AND YEAR(o.orderDate) = YEAR(CURDATE())
+            MONTH(o.orderDate) = p_month
+            AND YEAR(o.orderDate) = p_year
         GROUP BY 
             o.customerNumber
     ) AS customerOrders ON c.customerNumber = customerOrders.customerNumber
@@ -495,7 +492,7 @@ BEGIN
         c.latest_audituser = 'System',
         c.latest_activityreason = 'Monthly reassessment of credit limit';
 
-    -- Additional credit for customers with more than 15 orders in the current month
+    -- Additional credit for customers with more than 15 orders in the given month and year
     UPDATE customers c
     JOIN (
         SELECT 
@@ -506,8 +503,8 @@ BEGIN
         JOIN 
             orderdetails od ON o.orderNumber = od.orderNumber
         WHERE 
-            MONTH(o.orderDate) = MONTH(CURDATE())
-            AND YEAR(o.orderDate) = YEAR(CURDATE())
+            MONTH(o.orderDate) = p_month
+            AND YEAR(o.orderDate) = p_year
         GROUP BY 
             o.customerNumber
         HAVING COUNT(*) > 15
@@ -517,8 +514,23 @@ BEGIN
         c.latest_audituser = 'System',
         c.latest_activityreason = 'Monthly reassessment: additional credit for high order count';
 
-END $$
+END$$
+
 DELIMITER ;
+
+-- Create the event to run every 30 days and call the procedure
+DROP EVENT IF EXISTS event_update_credit_limits;
+DELIMITER $$
+
+CREATE EVENT event_update_credit_limits
+ON SCHEDULE EVERY 30 DAY
+STARTS '2024-10-31 00:00:00'
+DO
+CALL procedure_update_credit_limits(2004, 11);
+
+$$
+DELIMITER ;
+
 
 -- PART 4C.D
 ALTER TABLE salesrepassignments

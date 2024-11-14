@@ -1,4 +1,4 @@
-
+
 -- Data Migration Script
 -- Extended DB Sales
 -- This script is to migrate the data from the old dbSales to the new dbSales Database

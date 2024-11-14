@@ -394,3 +394,56 @@ CREATE TABLE audit_credit_payments (
   latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
   PRIMARY KEY (customerNumber,paymentTimestamp,activity_timestamp)
 );
+
+-- alter customers to include columns used for audit (TAN)
+ALTER TABLE customers
+  ADD COLUMN latest_audituser 			varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_authorizinguser 	varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activityreason 		varchar(45) DEFAULT NULL,
+  ADD COLUMN latest_activitymethod 		enum('W','M','D') DEFAULT NULL;
+  
+-- audit table for customers (TAN)
+DROP TABLE IF EXISTS audit_customers;
+CREATE TABLE audit_customers (
+  activity 					enum('C','U','D') 	DEFAULT NULL,
+  activity_timestamp		datetime 			NOT NULL,
+  customerNumber 			int			 		NOT NULL,
+  old_customerName			varchar(50)			DEFAULT NULL,
+  old_contactLastName		varchar(50)			DEFAULT NULL,
+  old_contactFirstName		varchar(50)			DEFAULT NULL,
+  old_phone					varchar(50)			DEFAULT NULL,
+  old_addressLine1			varchar(50)			DEFAULT NULL,
+  old_addressLine2			varchar(50)			DEFAULT NULL,
+  old_city					varchar(50) 		DEFAULT NULL,
+  old_state					varchar(50) 		DEFAULT NULL,
+  old_postalCode			varchar(15) 		DEFAULT NULL,
+  old_country				varchar(50) 		DEFAULT NULL,
+  old_salesRepEmployeeNumber	int				DEFAULT NULL,
+  old_creditLimit			double				DEFAULT NULL,
+  old_officeCode			varchar(10)			DEFAULT NULL,
+  old_startDate				date				DEFAULT NULL,
+  old_latest_audituser		varchar(45)			DEFAULT NULL,
+  old_latest_activityreason varchar(100)		DEFAULT NULL,
+  new_customerName			varchar(50)			DEFAULT NULL,
+  new_contactLastName		varchar(50)			DEFAULT NULL,
+  new_contactFirstName		varchar(50)			DEFAULT NULL,
+  new_phone					varchar(50)			DEFAULT NULL,
+  new_addressLine1			varchar(50)			DEFAULT NULL,
+  new_addressLine2			varchar(50)			DEFAULT NULL,
+  new_city					varchar(50) 		DEFAULT NULL,
+  new_state					varchar(50) 		DEFAULT NULL,
+  new_postalCode			varchar(15) 		DEFAULT NULL,
+  new_country				varchar(50) 		DEFAULT NULL,
+  new_salesRepEmployeeNumber	int				DEFAULT NULL,
+  new_creditLimit			double				DEFAULT NULL,
+  new_officeCode			varchar(10)			DEFAULT NULL,
+  new_startDate				date				DEFAULT NULL,
+  new_latest_audituser		varchar(45)			DEFAULT NULL,
+  new_latest_activityreason varchar(100)		DEFAULT NULL,
+  dbuser 					varchar(45)	 		DEFAULT NULL,
+  latest_audituser 			varchar(45) 		DEFAULT NULL,
+  latest_authorizinguser	varchar(45) 		DEFAULT NULL,
+  latest_activityreason	 	varchar(45) 		DEFAULT NULL,
+  latest_activitymethod 	enum('W','M','D') 	DEFAULT NULL,
+  PRIMARY KEY (customerNumber,activity_timestamp)
+);

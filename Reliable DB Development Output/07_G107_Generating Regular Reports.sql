@@ -1,12 +1,3 @@
-DROP TABLE IF EXISTS reports_inventory;
-CREATE TABLE reports_inventory (
-	reportid		INT(10)	AUTO_INCREMENT,
-    generationdate	DATETIME,
-    generatedby		VARCHAR(100),
-    reportdesc		VARCHAR(100),
-    PRIMARY KEY (reportid)
-);
-
 -- Create a Special getMSRP
 DROP FUNCTION IF EXISTS getMSRP_2;
 DELIMITER $$
@@ -104,8 +95,8 @@ BEGIN
     DECLARE v_reportid INT;
 
     -- Get the current year and month
-    DECLARE p_year INT DEFAULT YEAR(CURDATE());
-    DECLARE p_month INT DEFAULT MONTH(CURDATE());
+    DECLARE p_year INT DEFAULT YEAR(2003);
+    DECLARE p_month INT DEFAULT MONTH(11);
 
     -- Get the month name from the month number
     SET @month_name = ELT(p_month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December');
@@ -168,6 +159,7 @@ DELIMITER ;
 -- CALL generate_sales_report();
 -- SELECT * FROM reports_inventory ORDER BY generationdate ;
 -- SELECT * FROM sales_reports ORDER BY reportid ;
+SELECT * FROM orders;
 
 
 -- REPORT02: Quantity Ordered Report
@@ -399,6 +391,8 @@ BEGIN
 END $$
 DELIMITER ;
 
+DROP EVENT IF EXISTS generate_monthly_pricing_variation_report;
+DELIMITER $$
 CREATE EVENT generate_monthly_pricing_variation_report
 ON SCHEDULE EVERY 30 DAY
 STARTS '2024-10-31 00:00:00'
@@ -412,7 +406,14 @@ DELIMITER ;
 -- SELECT * FROM pricing_variation_reports ORDER BY reportid DESC LIMIT 1;
 
 
-
+DROP TABLE IF EXISTS reports_inventory;
+CREATE TABLE reports_inventory (
+	reportid		INT(10)	AUTO_INCREMENT,
+    generationdate	DATETIME,
+    generatedby		VARCHAR(100),
+    reportdesc		VARCHAR(100),
+    PRIMARY KEY (reportid)
+);
 
 -- ORIGINAL SQL
 

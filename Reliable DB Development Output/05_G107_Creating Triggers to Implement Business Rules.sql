@@ -312,8 +312,10 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
 
-    -- Check if the status is "Pending" or "In Process" to allow cancellation
-    IF (SELECT status FROM orders WHERE orderNumber = OLD.orderNumber) NOT IN ('Pending', 'In Process') THEN
+    -- 4A.D (KRUEGER)
+     -- Check if the status is "Pending" or "In Process" to allow cancellation
+    IF (SELECT status FROM orders WHERE orderNumber = OLD.orderNumber AND status NOT IN ('Pending', 'In Process') )
+    THEN
         SET errormessage = 'Ordered products can only be cancelled when the order is in Pending or In Process status.';
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
     END IF;
@@ -588,7 +590,7 @@ BEFORE INSERT ON salesrepassignments FOR EACH ROW BEGIN
 END$$
 DELIMITER ;
 
-DROP TRIGGER IF EXISTS before_update_salesrepassignments
+DROP TRIGGER IF EXISTS before_update_salesrepassignments;
 DELIMITER $$
 CREATE TRIGGER before_update_salesrepassignments BEFORE UPDATE ON salesrepassignments FOR EACH ROW BEGIN
     -- Enforce a maximum assignment duration of one month
@@ -597,10 +599,16 @@ CREATE TRIGGER before_update_salesrepassignments BEFORE UPDATE ON salesrepassign
     END IF;
 
     -- Prevent updates to quota if not authorized
-    IF NEW.quota IS NULL OR NEW.quota <= 0 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Quota must be a positive value set by the Sales Manager.';
-    END IF;
+     -- 4C.F (KRUEGER)
+    IF NEW.endDate != CURDATE() THEN
+        -- SET errormessage = CONCAT('endDate ', NEW.endDate);
+       --  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = errormessage;
+        
+				IF NEW.quota IS NULL OR NEW.quota <= 0 THEN
+					SIGNAL SQLSTATE '45000'
+					SET MESSAGE_TEXT = 'Quota must be a positive value set by the Sales Manager.';
+				END IF;
+	END IF;
 END$$
 DELIMITER ;
 
@@ -976,5 +984,18 @@ CREATE TRIGGER inventory_managers_BEFORE_DELETE BEFORE DELETE ON inventory_manag
 	INSERT INTO audit_inventory_managers VALUES
 		('D', NOW(), old.employeeNumber,
           USER(), NULL, NULL, NULL, NULL);
+END $$
+DELIMITER ;
+
+-- 4C.F (KRUEGER)
+DROP TRIGGER IF EXISTS employees_AFTER_UPDATE;
+DELIMITER $$
+CREATE TRIGGER `employees_AFTER_UPDATE` AFTER UPDATE ON `employees` FOR EACH ROW BEGIN
+
+	IF OLD.employee_type = "Sales Representative" THEN
+		UPDATE salesrepassignments 
+           SET endDate = curdate()
+		 WHERE employeeNumber = OLD.employeeNumber;
+	END IF;
 END $$
 DELIMITER ;

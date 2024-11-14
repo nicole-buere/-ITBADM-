@@ -465,12 +465,26 @@ END$$
 DELIMITER ;
 
 -- PART 4.D
-
 DROP PROCEDURE IF EXISTS procedure_update_credit_limits;
 DELIMITER $$
 
 CREATE PROCEDURE procedure_update_credit_limits(IN p_year INT, IN p_month INT)
 BEGIN
+    -- Declare a variable to hold the audit user
+    DECLARE audit_user VARCHAR(100);
+    DECLARE activity_reason VARCHAR(200);
+
+    -- Set the audit user to the current user
+    SET audit_user = CURRENT_USER();
+
+    -- Check if the user is root@localhost and adjust accordingly
+    IF audit_user = 'root@localhost' THEN
+        SET audit_user = 'System';
+        SET activity_reason = 'System generated monthly reassessment of credit limit';
+    ELSE
+        SET activity_reason = 'Monthly reassessment of credit limit';
+    END IF;
+
     -- Update credit limits based on total order amount for each customer in the given month and year
     UPDATE customers c
     LEFT JOIN (
@@ -489,8 +503,8 @@ BEGIN
     ) AS customerOrders ON c.customerNumber = customerOrders.customerNumber
     SET 
         c.creditLimit = IFNULL(customerOrders.customerTotalAmount * 2, 0),
-        c.latest_audituser = 'System',
-        c.latest_activityreason = 'Monthly reassessment of credit limit';
+        c.latest_audituser = audit_user,
+        c.latest_activityreason = activity_reason;
 
     -- Additional credit for customers with more than 15 orders in the given month and year
     UPDATE customers c
@@ -511,12 +525,13 @@ BEGIN
     ) AS extraCredit ON c.customerNumber = extraCredit.customerNumber
     SET 
         c.creditLimit = c.creditLimit + extraCredit.maxOrderAmount,
-        c.latest_audituser = 'System',
-        c.latest_activityreason = 'Monthly reassessment: additional credit for high order count';
+        c.latest_audituser = audit_user,
+        c.latest_activityreason = CONCAT(activity_reason, ': additional credit for high order count');
 
 END$$
 
 DELIMITER ;
+
 
 -- Create the event to run every 30 days and call the procedure
 DROP EVENT IF EXISTS event_update_credit_limits;

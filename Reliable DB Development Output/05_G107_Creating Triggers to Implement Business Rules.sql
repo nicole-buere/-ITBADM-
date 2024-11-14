@@ -541,10 +541,12 @@ CREATE EVENT event_update_credit_limits
 ON SCHEDULE EVERY 30 DAY
 STARTS '2024-10-31 00:00:00'
 DO
-CALL procedure_update_credit_limits(2004, 11);
+CALL procedure_update_credit_limits(YEAR(CURDATE()), MONTH(CURDATE()));
 
 $$
 DELIMITER ;
+
+GRANT EXECUTE ON PROCEDURE `dbsalesv2.0`.`procedure_update_credit_limits` TO systemmodule;
 
 
 -- PART 4C.D

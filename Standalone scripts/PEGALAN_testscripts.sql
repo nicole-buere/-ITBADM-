@@ -184,6 +184,13 @@ SELECT * FROM view_product_msrp;
 
 -- PART 4A.F tests
 
+DROP TRIGGER IF EXISTS orders_BEFORE_INSERT;
+DROP TRIGGER IF EXISTS orders_BEFORE_DELETE;
+DELETE FROM `dbsalesv2.0`.`orders` WHERE (`orderNumber` = '10426');
+DELETE FROM `dbsalesv2.0`.`orders` WHERE (`orderNumber` = '10427');
+-- Run create trigger orders_BEFORE_INSERT;
+-- Run create trigger orders_BEFORE_DELETE;
+
 SELECT * FROM customers;
 SELECT* FROM orders;
 SELECT * FROM products;

@@ -4,25 +4,24 @@ import java.util.*;
 // Josef Tan
 // WIP, currently looking at other works and going off that
 
-public class Employees {
+public class employees {
 
-    public String officeCode;
-    public String city;
-    public String phone;
-    public String addressLine1;
-    public String addressLine2;
-    public String state;
-    public String country;
-    public String postalCode;
-    public String territory;
+    public String employeeNumber;
+    public String lastName;
+    public String firstName;
+    public String extension;
+    public String email;
+    public int officeCode;
+    public int reportsTo;
+    public String jobTitle;
 
-    public Employees() {}
+    public employees() {}
 
     // Method to view office details
     public int viewEmployee() {
         Scanner sc = new Scanner(System.in);
         System.out.println("Enter Employee Number:");
-        officeCode = sc.nextLine();
+        employeeNumber = sc.nextLine();
 
         try {
             Connection conn = DriverManager.getConnection(
@@ -31,34 +30,32 @@ public class Employees {
             System.out.println("Connection Successful");
             
             PreparedStatement pstmt = conn.prepareStatement(
-                "SELECT city, phone, addressLine1, addressLine2, state, country, postalCode, territory FROM offices WHERE officeCode=?"
+                "SELECT lastName, firstName, extension, email, officeCode, reportsTo, jobTitle FROM employees WHERE employeeNumber=?"
             );
-            pstmt.setString(1, officeCode);
+            pstmt.setString(1, employeeNumber);
 
             System.out.println("Press enter key to start retrieving the data");
             sc.nextLine();
 
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
-                city = rs.getString("city");
-                phone = rs.getString("phone");
-                addressLine1 = rs.getString("addressLine1");
-                addressLine2 = rs.getString("addressLine2");
-                state = rs.getString("state");
-                country = rs.getString("country");
-                postalCode = rs.getString("postalCode");
-                territory = rs.getString("territory");
+                lastName = rs.getString("lastName");
+                firstName = rs.getString("firstName");
+                extension = rs.getString("extension");
+                email = rs.getString("email");
+                officeCode = rs.getInt("officeCode");
+                reportsTo = rs.getInt("reportsTo");
+                jobTitle = rs.getString("jobTitle");
 
-                System.out.println("City: " + city);
-                System.out.println("Phone: " + phone);
-                System.out.println("Address Line 1: " + addressLine1);
-                System.out.println("Address Line 2: " + addressLine2);
-                System.out.println("State: " + state);
-                System.out.println("Country: " + country);
-                System.out.println("Postal Code: " + postalCode);
-                System.out.println("Territory: " + territory);
+                System.out.println("Name: " + firstName + " " + lastName);
+                System.out.println("Extension: " + extension);
+                System.out.println("Email: " + email);
+                System.out.println("Office Code: " + officeCode);
+                System.out.println("Reports to employee number: " + reportsTo);
+                System.out.println("Job Title: " + jobTitle);
+
             } else {
-                System.out.println("Office not found.");
+                System.out.println("Employee not found.");
             }
 
             rs.close();
@@ -72,7 +69,7 @@ public class Employees {
         }
     }
 
-    // Method to update office information
+    /*
     public int updateOffice() {
         Scanner sc = new Scanner(System.in);
         System.out.println("Enter Office Code to Update:");
@@ -126,8 +123,8 @@ public class Employees {
             return 0;
         }
     }
-
-    // Method to deactivate an office and relocate employees
+    */
+    /*  Method to deactivate an office and relocate employees
     public int deactivateOffice() {
         Scanner sc = new Scanner(System.in);
         System.out.println("Enter Office Code to Deactivate:");
@@ -169,7 +166,7 @@ public class Employees {
             return 0;
         }
     }
-
+    */
     // Main Method
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
@@ -177,16 +174,15 @@ public class Employees {
 
         System.out.println("Press 0 to exit....");
         while (true) {
-            System.out.println("Enter [1] View Office [2] Update Office [3] Deactivate Office:");
+            System.out.println("Enter [1] View Office [2] Deactivate Emloyee: ");
             choice = sc.nextInt();
             sc.nextLine(); // Consume newline character
 
-            Offices office = new Offices();
+            employees employee = new employees();
 
-            if (choice == 1) office.viewOffice();
-            else if (choice == 2) office.updateOffice();
-            else if (choice == 3) office.deactivateOffice();
-            else if (choice == 0) break;
+            if (choice == 1) employee.viewEmployee();
+                else if (choice == 2) employee.viewEmployee();
+                    else if (choice == 0) break;
 
             System.out.println("Press enter key to continue....");
             sc.nextLine();

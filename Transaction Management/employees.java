@@ -61,10 +61,12 @@ public class employees {
             rs.close();
             pstmt.close();
             conn.close();
+            sc.close();
             return 1;
 
         } catch (Exception e) {
             System.out.println(e.getMessage());
+            sc.close();
             return 0;
         }
     }
@@ -168,13 +170,14 @@ public class employees {
     }
     */
     // Main Method
+
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
         int choice;
 
         System.out.println("Press 0 to exit....");
         while (true) {
-            System.out.println("Enter [1] View Office [2] Deactivate Emloyee: ");
+            System.out.println("Enter [1] View Employee [2] Deactivate Emloyee: ");
             choice = sc.nextInt();
             sc.nextLine(); // Consume newline character
 
@@ -187,5 +190,7 @@ public class employees {
             System.out.println("Press enter key to continue....");
             sc.nextLine();
         }
+
+        sc.close();
     }
 }

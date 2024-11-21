@@ -1,5 +1,11 @@
 import java.sql.*;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+
+/*
+ javac -cp ".;mysql-connector-j-9.0.0.jar" employees.java
+ java -cp ".;mysql-connector-j-9.0.0.jar" employees.java
+ */
 
 // Josef Tan
 // WIP, currently looking at other works and going off that
@@ -31,14 +37,17 @@ public class employees {
             conn.setAutoCommit(false);
             
             PreparedStatement pstmt = conn.prepareStatement(
-                "SELECT lastName, firstName, extension, email, officeCode, reportsTo, jobTitle FROM employees WHERE employeeNumber=?"
+                "SELECT lastName, firstName, extension, email, officeCode, reportsTo, jobTitle FROM employees WHERE employeeNumber=? LOCK IN SHARE MODE"
             );
             pstmt.setString(1, employeeNumber);
 
+            /* 
             System.out.println("Press enter key to start retrieving the data");
             sc.nextLine();
+            */
 
             ResultSet rs = pstmt.executeQuery();
+            TimeUnit.SECONDS.sleep(5);
             if (rs.next()) {
                 lastName = rs.getString("lastName");
                 firstName = rs.getString("firstName");
@@ -48,7 +57,7 @@ public class employees {
                 reportsTo = rs.getInt("reportsTo");
                 jobTitle = rs.getString("jobTitle");
 
-                System.out.println("Name: " + firstName + " " + lastName);
+                System.out.println("\nName: " + firstName + " " + lastName);
                 System.out.println("Extension: " + extension);
                 System.out.println("Email: " + email);
                 System.out.println("Office Code: " + officeCode);
@@ -73,95 +82,73 @@ public class employees {
         }
     }
 
-    /*
-    public int updateOffice() {
+    //  deactivate employees and reassign customers who were orginally assigned to that employee to go to the overall sales manager
+    public int deactivateEmployee() {
         Scanner sc = new Scanner(System.in);
-        System.out.println("Enter Office Code to Update:");
-        officeCode = sc.nextLine();
+        System.out.println("Enter Employee Number to Deactivate:");
+        employeeNumber = sc.nextLine();
 
         try {
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=admin&password=DLSU1234!"
-            );
-            System.out.println("Connection Successful");
-
-            System.out.println("Enter new City:");
-            city = sc.nextLine();
-            System.out.println("Enter new Phone:");
-            phone = sc.nextLine();
-            System.out.println("Enter new Address Line 1:");
-            addressLine1 = sc.nextLine();
-            System.out.println("Enter new Address Line 2 (or leave blank):");
-            addressLine2 = sc.nextLine();
-            System.out.println("Enter new State (or leave blank):");
-            state = sc.nextLine();
-            System.out.println("Enter new Country:");
-            country = sc.nextLine();
-            System.out.println("Enter new Postal Code:");
-            postalCode = sc.nextLine();
-            System.out.println("Enter new Territory:");
-            territory = sc.nextLine();
-
-            PreparedStatement pstmt = conn.prepareStatement(
-                "UPDATE offices SET city=?, phone=?, addressLine1=?, addressLine2=?, state=?, country=?, postalCode=?, territory=? WHERE officeCode=?"
-            );
-            pstmt.setString(1, city);
-            pstmt.setString(2, phone);
-            pstmt.setString(3, addressLine1);
-            pstmt.setString(4, addressLine2);
-            pstmt.setString(5, state);
-            pstmt.setString(6, country);
-            pstmt.setString(7, postalCode);
-            pstmt.setString(8, territory);
-            pstmt.setString(9, officeCode);
-
-            pstmt.executeUpdate();
-            System.out.println("Office updated successfully.");
-
-            pstmt.close();
-            conn.close();
-            return 1;
-
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            return 0;
-        }
-    }
-    */
-    /*  Method to deactivate an office and relocate employees
-    public int deactivateOffice() {
-        Scanner sc = new Scanner(System.in);
-        System.out.println("Enter Office Code to Deactivate:");
-        officeCode = sc.nextLine();
-
-        System.out.println("Enter Main Office Code for Employee Relocation:");
-        String mainOfficeCode = sc.nextLine();
-
-        try {
-            Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=admin&password=DLSU1234!"
+                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=root&password=MyNewPass"
             );
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
 
-            // Relocate employees to the main office
-            PreparedStatement pstmtRelocate = conn.prepareStatement(
-                "UPDATE employees SET officeCode=? WHERE officeCode=?"
+            // find an employee with that employee number and lock those employees
+            PreparedStatement pstmtEmployee = conn.prepareStatement(
+                "SELECT employeeNumber FROM employees WHERE employeeNumber=? FOR UPDATE"
             );
-            pstmtRelocate.setString(1, mainOfficeCode);
-            pstmtRelocate.setString(2, officeCode);
-            int relocatedCount = pstmtRelocate.executeUpdate();
+            pstmtEmployee.setString(1, employeeNumber);
 
-            // Remove the office
-            PreparedStatement pstmtDelete = conn.prepareStatement("DELETE FROM offices WHERE officeCode=?");
-            pstmtDelete.setString(1, officeCode);
-            pstmtDelete.executeUpdate();
+            System.out.println("Searching for employee with number " + employeeNumber);
+            ResultSet rsEmployees = pstmtEmployee.executeQuery();
+            TimeUnit.SECONDS.sleep(5);
 
-            conn.commit();
-            System.out.println("Office deactivated successfully. " + relocatedCount + " employees relocated to Main Office.");
+            // if an employee was found in the table
+            if(rsEmployees.isBeforeFirst()) {
 
-            pstmtRelocate.close();
-            pstmtDelete.close();
+                // Relocate employees to the main office
+                // 1143 is the employee number of the overall sales manager
+                PreparedStatement pstmtRelocate = conn.prepareStatement(
+                    "UPDATE customers SET salesRepEmployeeNumber='1143' WHERE salesRepEmployeeNumber=?"
+                );
+                pstmtRelocate.setString(1, employeeNumber);
+                System.out.println("Relocating customers who were assigned to that employee to the overall sales manager");
+                int reassignCount = pstmtRelocate.executeUpdate();
+                TimeUnit.SECONDS.sleep(5);
+
+                // clear the 'reportsTo' fields for employees who report to the employee who will be deactivated
+                PreparedStatement pstmtClear = conn.prepareStatement("UPDATE employees SET reportsTo=NULL WHERE reportsTo=?");
+                pstmtClear.setString(1, employeeNumber);
+                System.out.println("Clearing employee 'reportsTo' fields who were assigned to employee number " + employeeNumber);
+                pstmtClear.executeUpdate();
+                TimeUnit.SECONDS.sleep(5);
+
+                // Remove the employee
+                PreparedStatement pstmtDelete = conn.prepareStatement("DELETE FROM employees WHERE employeeNumber=?");
+                pstmtDelete.setString(1, employeeNumber);
+                System.out.println("Removing employee record");
+                int deleteCount = pstmtDelete.executeUpdate();
+                TimeUnit.SECONDS.sleep(5);
+
+                conn.commit();
+                if(deleteCount == 0) {
+                    System.out.println("No employee found with that number, no deactivation was done.");
+                } 
+                else {
+                    System.out.println("Employee deactivated successfully. " + reassignCount + " customers reassigned to overall sales manager.\n");
+                }
+
+                // close prepared statements
+                pstmtRelocate.close();
+                pstmtClear.close();
+                pstmtDelete.close();
+            }
+            else {
+                System.out.println("No employee with that number exists.");
+            }
+            pstmtEmployee.close();
             conn.close();
             return 1;
 
@@ -169,8 +156,9 @@ public class employees {
             System.out.println(e.getMessage());
             return 0;
         }
+
     }
-    */
+    
     // Main Method
 
     public static void main(String[] args) {
@@ -179,14 +167,14 @@ public class employees {
 
         System.out.println("Press 0 to exit....");
         while (true) {
-            System.out.println("Enter [1] View Employee [2] Deactivate Emloyee: ");
+            System.out.println("Enter [1] View Employee [2] Deactivate Employee: ");
             choice = sc.nextInt();
             sc.nextLine(); // Consume newline character
 
             employees employee = new employees();
 
             if (choice == 1) employee.viewEmployee();
-                else if (choice == 2) employee.viewEmployee();
+                else if (choice == 2) employee.deactivateEmployee();
                     else if (choice == 0) break;
 
             System.out.println("Press enter key to continue....");

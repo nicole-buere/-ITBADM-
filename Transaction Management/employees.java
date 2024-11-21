@@ -25,9 +25,10 @@ public class employees {
 
         try {
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=admin&password=DLSU1234!"
+                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=root&password=MyNewPass"
             );
             System.out.println("Connection Successful");
+            conn.setAutoCommit(false);
             
             PreparedStatement pstmt = conn.prepareStatement(
                 "SELECT lastName, firstName, extension, email, officeCode, reportsTo, jobTitle FROM employees WHERE employeeNumber=?"
@@ -52,7 +53,7 @@ public class employees {
                 System.out.println("Email: " + email);
                 System.out.println("Office Code: " + officeCode);
                 System.out.println("Reports to employee number: " + reportsTo);
-                System.out.println("Job Title: " + jobTitle);
+                System.out.println("Job Title: " + jobTitle + "\n");
 
             } else {
                 System.out.println("Employee not found.");
@@ -60,13 +61,14 @@ public class employees {
 
             rs.close();
             pstmt.close();
+            conn.commit();
             conn.close();
-            sc.close();
+            //sc.close();
             return 1;
 
         } catch (Exception e) {
             System.out.println(e.getMessage());
-            sc.close();
+            //sc.close();
             return 0;
         }
     }

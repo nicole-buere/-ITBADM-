@@ -103,6 +103,8 @@ public class offices {
     
             // Add a deliberate delay
             TimeUnit.SECONDS.sleep(10); // 10-second delay
+            System.out.println("\nPress any key to continue...");
+            sc.nextLine(); // Wait for user input to proceed
 
             if (rs.next()) {
                 // Display current values and allow user to update selectively

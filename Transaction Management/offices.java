@@ -1,3 +1,6 @@
+// add column to deactivate office
+// ALTER TABLE offices ADD COLUMN status ENUM('active', 'inactive') DEFAULT 'active';
+
 // to compile
 // javac -cp ".;mysql-connector-j-9.0.0.jar" offices.java
 

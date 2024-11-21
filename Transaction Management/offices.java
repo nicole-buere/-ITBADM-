@@ -1,7 +1,7 @@
 import java.sql.*;
 import java.util.*;
 
-public class offices {
+public class Offices {
 
     public String officeCode;
     public String city;

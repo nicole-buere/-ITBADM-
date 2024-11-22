@@ -1,3 +1,7 @@
+// ALTER TABLE offices ADD COLUMN status ENUM('active', 'inactive') DEFAULT 'active';
+// CREATE USER IF NOT EXISTS '12185744'@'localhost';
+// GRANT ALL PRIVILEGES ON dbsales.* TO '12185744'@'localhost';
+
 // add column to deactivate office
 // ALTER TABLE offices ADD COLUMN status ENUM('active', 'inactive') DEFAULT 'active';
 
@@ -347,7 +351,7 @@ public class offices {
                 System.out.println("Invalid choice. Please select a valid option.");
         }
 
-        System.out.println("\nPress Enter to return to the main menu...");
+        System.out.println("\nPress Enter to return to the offices management menu...");
         sc.nextLine(); // Wait for user to press Enter
     }
 }

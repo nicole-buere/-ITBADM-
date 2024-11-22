@@ -284,3 +284,8 @@ UNLOCK TABLES;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2024-05-13  6:44:08
+
+-- add new row to dbsales employees
+ALTER TABLE `dbsales`.`employees` 
+ADD COLUMN `active` ENUM('Y', 'N') NULL DEFAULT 'Y' AFTER `jobTitle`;
+

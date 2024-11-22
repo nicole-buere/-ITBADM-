@@ -23,7 +23,7 @@ public class employees {
 
     public employees() {}
 
-    // Method to view office details
+    // Method to view employee details
     public int viewEmployee() {
         Scanner sc = new Scanner(System.in);
         System.out.println("Enter Employee Number:");
@@ -31,14 +31,14 @@ public class employees {
 
         try {
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=root&password=MyNewPass"
+                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=root&password=p@ssword"
             );
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
             
             // select the employee and issue a READ lock to the row
             PreparedStatement pstmt = conn.prepareStatement(
-                "SELECT lastName, firstName, extension, email, officeCode, reportsTo, jobTitle FROM employees WHERE employeeNumber=? LOCK IN SHARE MODE"
+                "SELECT lastName, firstName, extension, email, officeCode, reportsTo, jobTitle FROM employees WHERE employeeNumber=? AND active='Y' LOCK IN SHARE MODE"
             );
             pstmt.setString(1, employeeNumber);
 
@@ -90,8 +90,11 @@ public class employees {
         employeeNumber = sc.nextLine();
 
         try {
+            int overallSalesManagerNum;
+            int customerReassignCount;
+            int deleteCount;
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=root&password=MyNewPass"
+                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=root&password=p@ssword"
             );
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
@@ -104,17 +107,9 @@ public class employees {
             pstmtEmployeesTable.executeQuery();
             TimeUnit.SECONDS.sleep(5);
 
-            // lock employees table
-            PreparedStatement pstmtCustomersTable = conn.prepareStatement(
-                "SELECT MAX(customerNumber)+1 FROM customers FOR UPDATE"  
-            );
-            System.out.println("Locking customers table");
-            pstmtCustomersTable.executeQuery();
-            TimeUnit.SECONDS.sleep(5);
-
-            // find an employee with that employee number and lock those employees
+            // find an employee with that employee number
             PreparedStatement pstmtEmployee = conn.prepareStatement(
-                "SELECT employeeNumber FROM employees WHERE employeeNumber=?"
+                "SELECT reportsTo FROM employees WHERE employeeNumber=? AND active='Y'"
             );
             pstmtEmployee.setString(1, employeeNumber);
 
@@ -125,48 +120,66 @@ public class employees {
             // if an employee was found in the table
             if(rsEmployees.isBeforeFirst()) {
 
-                // Relocate employees to the main office
-                // 1143 is the employee number of the overall sales manager
-                PreparedStatement pstmtRelocate = conn.prepareStatement(
-                    "UPDATE customers SET salesRepEmployeeNumber='1143' WHERE salesRepEmployeeNumber=?"
+                // lock customers table
+                PreparedStatement pstmtCustomersTable = conn.prepareStatement(
+                    "SELECT MAX(customerNumber)+1 FROM customers FOR UPDATE"  
                 );
-                pstmtRelocate.setString(1, employeeNumber);
-                System.out.println("Relocating customers who were assigned to that employee to the overall sales manager");
-                int reassignCount = pstmtRelocate.executeUpdate();
+                System.out.println("Locking customers table");
+                pstmtCustomersTable.executeQuery();
                 TimeUnit.SECONDS.sleep(5);
 
+                // Relocate customers to overall sales manager
+                PreparedStatement pstmtRelocate = conn.prepareStatement(
+                    "UPDATE customers SET salesRepEmployeeNumber=? WHERE salesRepEmployeeNumber=?"
+                );
+                // get the overall sales manager of the employee
+                if (rsEmployees.next()) {
+                    overallSalesManagerNum = rsEmployees.getInt("reportsTo");
+
+                    pstmtRelocate.setInt(1, overallSalesManagerNum);
+                    pstmtRelocate.setString(2, employeeNumber);
+                    System.out.println("Relocating customers who were assigned to that employee to the overall sales manager");
+                    customerReassignCount = pstmtRelocate.executeUpdate();
+                    TimeUnit.SECONDS.sleep(5);
+
+                } else {
+                    System.out.println("Employee's overall sales maanger not found.");
+                }
+
+
+
                 // clear the 'reportsTo' fields for employees who report to the employee who will be deactivated
-                PreparedStatement pstmtClear = conn.prepareStatement("UPDATE employees SET reportsTo=NULL WHERE reportsTo=?");
+                PreparedStatement pstmtClear = conn.prepareStatement("UPDATE employees SET reportsTo=NULL WHERE reportsTo=? AND active='Y'");
                 pstmtClear.setString(1, employeeNumber);
-                System.out.println("Clearing employee 'reportsTo' fields who were assigned to employee number " + employeeNumber);
-                pstmtClear.executeUpdate();
+                System.out.println("Clearing employee 'reportsTo' fields for those who report to employee number " + employeeNumber);
+                int employeeReassignCount = pstmtClear.executeUpdate();
                 TimeUnit.SECONDS.sleep(5);
 
                 // Remove the employee
-                PreparedStatement pstmtDelete = conn.prepareStatement("DELETE FROM employees WHERE employeeNumber=?");
+                PreparedStatement pstmtDelete = conn.prepareStatement("UPDATE employees SET active='N' WHERE employeeNumber=?");
                 pstmtDelete.setString(1, employeeNumber);
-                System.out.println("Removing employee record");
-                int deleteCount = pstmtDelete.executeUpdate();
+                System.out.println("Deactivating employee record");
+                deleteCount = pstmtDelete.executeUpdate();
                 TimeUnit.SECONDS.sleep(5);
 
                 conn.commit();
                 if(deleteCount == 0) {
-                    System.out.println("No employee found with that number, no deactivation was done.");
+                    System.out.println("No active employee found with that number, no deactivation was done.");
                 } 
                 else {
-                    System.out.println("Employee deactivated successfully. " + reassignCount + " customers reassigned to overall sales manager.\n");
+                    System.out.println("Employee deactivated successfully. " + "X" + " customers reassigned to overall sales manager whose number\n" + employeeReassignCount + " employees have been moved to no longer report to this employee.\n");
                 }
 
                 // close prepared statements
+                pstmtCustomersTable.close();
                 pstmtRelocate.close();
                 pstmtClear.close();
                 pstmtDelete.close();
             }
             else {
-                System.out.println("No employee with that number exists.");
+                System.out.println("No active employee with that number exists.");
             }
             pstmtEmployeesTable.close();
-            pstmtCustomersTable.close();
             pstmtEmployee.close();
             conn.close();
             return 1;

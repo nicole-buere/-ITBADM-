@@ -36,6 +36,7 @@ public class employees {
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
             
+            // select the employee and issue a READ lock to the row
             PreparedStatement pstmt = conn.prepareStatement(
                 "SELECT lastName, firstName, extension, email, officeCode, reportsTo, jobTitle FROM employees WHERE employeeNumber=? LOCK IN SHARE MODE"
             );
@@ -95,9 +96,25 @@ public class employees {
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
 
+            // lock employees table
+            PreparedStatement pstmtEmployeesTable = conn.prepareStatement(
+                "SELECT MAX(employeeNumber)+1 FROM employees FOR UPDATE"  
+            );
+            System.out.println("Locking employees table");
+            pstmtEmployeesTable.executeQuery();
+            TimeUnit.SECONDS.sleep(5);
+
+            // lock employees table
+            PreparedStatement pstmtCustomersTable = conn.prepareStatement(
+                "SELECT MAX(customerNumber)+1 FROM customers FOR UPDATE"  
+            );
+            System.out.println("Locking customers table");
+            pstmtCustomersTable.executeQuery();
+            TimeUnit.SECONDS.sleep(5);
+
             // find an employee with that employee number and lock those employees
             PreparedStatement pstmtEmployee = conn.prepareStatement(
-                "SELECT employeeNumber FROM employees WHERE employeeNumber=? FOR UPDATE"
+                "SELECT employeeNumber FROM employees WHERE employeeNumber=?"
             );
             pstmtEmployee.setString(1, employeeNumber);
 
@@ -148,6 +165,8 @@ public class employees {
             else {
                 System.out.println("No employee with that number exists.");
             }
+            pstmtEmployeesTable.close();
+            pstmtCustomersTable.close();
             pstmtEmployee.close();
             conn.close();
             return 1;

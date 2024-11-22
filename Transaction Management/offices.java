@@ -32,7 +32,7 @@ public class offices {
     public offices() {}
 
     // Method to view office details
-    public int viewOffice() {
+    public void viewOffice() {
         Scanner sc = new Scanner(System.in);
         System.out.println("Enter Office Code:");
         officeCode = sc.nextLine();
@@ -89,7 +89,7 @@ public class offices {
     }
 
     // Method to update office information
-    public int updateOffice() {
+    public void updateOffice() {
         Scanner sc = new Scanner(System.in);
         System.out.println("Enter Office Code to Update:");
         officeCode = sc.nextLine();
@@ -211,7 +211,7 @@ public class offices {
     
 
     // Method to deactivate an office and relocate employees
-    public int deactivateOffice() {
+    public void deactivateOffice() {
         Scanner sc = new Scanner(System.in);
         System.out.println("Enter Office Code to Deactivate:");
         officeCode = sc.nextLine();

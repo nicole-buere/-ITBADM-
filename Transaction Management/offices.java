@@ -1,7 +1,3 @@
-// ALTER TABLE offices ADD COLUMN status ENUM('active', 'inactive') DEFAULT 'active';
-// CREATE USER IF NOT EXISTS '12185744'@'localhost';
-// GRANT ALL PRIVILEGES ON dbsales.* TO '12185744'@'localhost';
-
 // add column to deactivate office
 // ALTER TABLE offices ADD COLUMN status ENUM('active', 'inactive') DEFAULT 'active';
 
@@ -32,7 +28,7 @@ public class offices {
     public offices() {}
 
     // Method to view office details
-    public void viewOffice() {
+    public int viewOffice() {
         Scanner sc = new Scanner(System.in);
         System.out.println("Enter Office Code:");
         officeCode = sc.nextLine();
@@ -89,7 +85,7 @@ public class offices {
     }
 
     // Method to update office information
-    public void updateOffice() {
+    public int updateOffice() {
         Scanner sc = new Scanner(System.in);
         System.out.println("Enter Office Code to Update:");
         officeCode = sc.nextLine();
@@ -97,7 +93,7 @@ public class offices {
         try {
             // Establish a connection to the database
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=admin&password=DLSU1234!"
+                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC"
             );
             System.out.println("Connection Successful");
     
@@ -211,7 +207,7 @@ public class offices {
     
 
     // Method to deactivate an office and relocate employees
-    public void deactivateOffice() {
+    public int deactivateOffice() {
         Scanner sc = new Scanner(System.in);
         System.out.println("Enter Office Code to Deactivate:");
         officeCode = sc.nextLine();
@@ -224,7 +220,7 @@ public class offices {
         try {
             // Establish a connection to the database
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=admin&password=DLSU1234!"
+                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC"
             );
             System.out.println("Connection Successful");
     

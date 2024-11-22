@@ -31,7 +31,7 @@ public class employees {
 
         try {
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=root&password=p@ssword"
+                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=root&password=MyNewPass"
             );
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
@@ -47,8 +47,9 @@ public class employees {
             sc.nextLine();
             */
 
+            System.out.println("Searching for employee with number " + employeeNumber);
             ResultSet rs = pstmt.executeQuery();
-            TimeUnit.SECONDS.sleep(5);
+            TimeUnit.SECONDS.sleep(30);
             if (rs.next()) {
                 lastName = rs.getString("lastName");
                 firstName = rs.getString("firstName");
@@ -66,7 +67,7 @@ public class employees {
                 System.out.println("Job Title: " + jobTitle + "\n");
 
             } else {
-                System.out.println("Employee not found.");
+                System.out.println("No active employee with the employee number " + employeeNumber);
             }
 
             rs.close();
@@ -93,10 +94,10 @@ public class employees {
         employeeNumber = sc.nextLine();
 
         try {
-            int customerReassignCount;
+            int customerReassignCount = 0;
             int deleteCount;
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=root&password=p@ssword"
+                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=root&password=MyNewPass"
             );
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
@@ -135,20 +136,11 @@ public class employees {
                     "UPDATE customers SET salesRepEmployeeNumber=? WHERE salesRepEmployeeNumber=?"
                 );
                 // get the overall sales manager of the employee
-                if (rsEmployees.next()) {
-                    overallSalesManagerNum = rsEmployees.getInt("reportsTo");
-
-                    pstmtRelocate.setInt(1, overallSalesManagerNum);
-                    pstmtRelocate.setString(2, employeeNumber);
-                    System.out.println("Relocating customers who were assigned to that employee to the overall sales manager");
-                    customerReassignCount = pstmtRelocate.executeUpdate();
-                    TimeUnit.SECONDS.sleep(5);
-
-                } else {
-                    System.out.println("Employee's overall sales maanger not found.");
-                }
-
-
+                pstmtRelocate.setInt(1, overallSalesManagerNum);
+                pstmtRelocate.setString(2, employeeNumber);
+                System.out.println("Relocating customers who were assigned to that employee to the overall sales manager");
+                customerReassignCount = pstmtRelocate.executeUpdate();
+                TimeUnit.SECONDS.sleep(5);
 
                 // clear the 'reportsTo' fields for employees who report to the employee who will be deactivated
                 PreparedStatement pstmtClear = conn.prepareStatement("UPDATE employees SET reportsTo=NULL WHERE reportsTo=? AND active='Y'");
@@ -169,7 +161,7 @@ public class employees {
                     System.out.println("No active employee found with that number, no deactivation was done.");
                 } 
                 else {
-                    System.out.println("Employee deactivated successfully. " + "X" + " customers reassigned to overall sales manager whose number\n" + employeeReassignCount + " employees have been moved to no longer report to this employee.\n");
+                    System.out.println("Employee deactivated successfully. " + customerReassignCount + " customers reassigned to overall sales manager whose number is " + overallSalesManagerNum + "\n" + employeeReassignCount + " employees have been moved to no longer report to this employee.\n");
                 }
 
                 // close prepared statements

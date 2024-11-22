@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
  */
 
 // Josef Tan
-// WIP, currently looking at other works and going off that
+//WIP
 
 public class employees {
 
@@ -87,11 +87,12 @@ public class employees {
     // overall sales manager is the employee who's title is only 'Sales Manager' with no extra text added 
     public int deactivateEmployee() {
         Scanner sc = new Scanner(System.in);
+        // overall sales manager employee Number is 1165 in Orignial DB Sales
+        int overallSalesManagerNum = 1165;
         System.out.println("Enter Employee Number to Deactivate:");
         employeeNumber = sc.nextLine();
 
         try {
-            int overallSalesManagerNum;
             int customerReassignCount;
             int deleteCount;
             Connection conn = DriverManager.getConnection(

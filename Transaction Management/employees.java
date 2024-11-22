@@ -84,6 +84,7 @@ public class employees {
     }
 
     //  deactivate employees and reassign customers who were orginally assigned to that employee to go to the overall sales manager
+    // overall sales manager is the employee who's title is only 'Sales Manager' with no extra text added 
     public int deactivateEmployee() {
         Scanner sc = new Scanner(System.in);
         System.out.println("Enter Employee Number to Deactivate:");

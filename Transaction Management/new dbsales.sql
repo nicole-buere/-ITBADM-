@@ -288,3 +288,6 @@ UNLOCK TABLES;
 -- add new row to dbsales employees
 ALTER TABLE `dbsales`.`employees` 
 ADD COLUMN `active` ENUM('Y', 'N') NULL DEFAULT 'Y' AFTER `jobTitle`;
+
+-- add new row to dbsales offices
+ALTER TABLE offices ADD COLUMN status ENUM('active', 'inactive') DEFAULT 'active';

@@ -672,125 +672,154 @@ class offices {
     }
 
     // Method to update office information
-    public int updateOffice() {
-        Scanner sc = new Scanner(System.in);
-        System.out.println("Enter Office Code to Update:");
-        officeCode = sc.nextLine();
-    
-        try {
-            // Establish a connection to the database
-            Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC"
-            );
-            System.out.println("Connection Successful");
-    
-            System.out.println("Press Enter key to start retrieving the data...");
-            sc.nextLine(); // Wait for user input before retrieving data
-    
-            // Lock the row for the given officeCode and fetch data
-            conn.setAutoCommit(false); // Start transaction
-            PreparedStatement fetchStmt = conn.prepareStatement(
-                "SELECT city, phone, addressLine1, addressLine2, state, country, postalCode, territory " +
-                "FROM offices WHERE officeCode = ? FOR UPDATE"
-            );
-            fetchStmt.setString(1, officeCode);
-            ResultSet rs = fetchStmt.executeQuery();
-    
-            if (rs.next()) {
-                // Display current data
-                city = rs.getString("city");
-                phone = rs.getString("phone");
-                addressLine1 = rs.getString("addressLine1");
-                addressLine2 = rs.getString("addressLine2");
-                state = rs.getString("state");
-                country = rs.getString("country");
-                postalCode = rs.getString("postalCode");
-                territory = rs.getString("territory");
-    
-                System.out.println("\nCurrent Data for Office Code: " + officeCode);
-                System.out.println("City: " + city);
-                System.out.println("Phone: " + phone);
-                System.out.println("Address Line 1: " + addressLine1);
-                System.out.println("Address Line 2: " + addressLine2);
-                System.out.println("State: " + state);
-                System.out.println("Country: " + country);
-                System.out.println("Postal Code: " + postalCode);
-                System.out.println("Territory: " + territory);
-    
-                // Prompt user for new information
-                System.out.println("\nEnter new information (leave blank to keep current data):");
-                System.out.print("New City (current: " + city + "): ");
-                String newCity = sc.nextLine();
-                if (!newCity.isBlank()) city = newCity;
-    
-                System.out.print("New Phone (current: " + phone + "): ");
-                String newPhone = sc.nextLine();
-                if (!newPhone.isBlank()) phone = newPhone;
-    
-                System.out.print("New Address Line 1 (current: " + addressLine1 + "): ");
-                String newAddressLine1 = sc.nextLine();
-                if (!newAddressLine1.isBlank()) addressLine1 = newAddressLine1;
-    
-                System.out.print("New Address Line 2 (current: " + addressLine2 + "): ");
-                String newAddressLine2 = sc.nextLine();
-                if (!newAddressLine2.isBlank()) addressLine2 = newAddressLine2;
-    
-                System.out.print("New State (current: " + state + "): ");
-                String newState = sc.nextLine();
-                if (!newState.isBlank()) state = newState;
-    
-                System.out.print("New Country (current: " + country + "): ");
-                String newCountry = sc.nextLine();
-                if (!newCountry.isBlank()) country = newCountry;
-    
-                System.out.print("New Postal Code (current: " + postalCode + "): ");
-                String newPostalCode = sc.nextLine();
-                if (!newPostalCode.isBlank()) postalCode = newPostalCode;
-    
-                System.out.print("New Territory (current: " + territory + "): ");
-                String newTerritory = sc.nextLine();
-                if (!newTerritory.isBlank()) territory = newTerritory;
-    
-                // Update the row
-                PreparedStatement updateStmt = conn.prepareStatement(
-                    "UPDATE offices SET city=?, phone=?, addressLine1=?, addressLine2=?, state=?, country=?, postalCode=?, territory=? WHERE officeCode=?"
-                );
-                updateStmt.setString(1, city);
-                updateStmt.setString(2, phone);
-                updateStmt.setString(3, addressLine1);
-                updateStmt.setString(4, addressLine2);
-                updateStmt.setString(5, state);
-                updateStmt.setString(6, country);
-                updateStmt.setString(7, postalCode);
-                updateStmt.setString(8, territory);
-                updateStmt.setString(9, officeCode);
-    
-                updateStmt.executeUpdate();
-                System.out.println("\nUpdate Successful. Press Enter key to continue...");
-                sc.nextLine(); // Wait for user input before returning
-    
-                // Commit the transaction
-                conn.commit();
-    
-                updateStmt.close();
-            } else {
-                System.out.println("Office not found.");
+    // Method to update office information
+public int updateOffice() {
+    Scanner sc = new Scanner(System.in);
+    System.out.println("Enter Office Code to Update:");
+    officeCode = sc.nextLine();
+
+    try {
+        // Establish a connection to the database
+        Connection conn = DriverManager.getConnection(
+            "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC"
+        );
+        System.out.println("Connection Successful");
+
+        System.out.println("Press Enter key to start retrieving the data...");
+        sc.nextLine(); // Wait for user input before retrieving data
+
+        // Check the status of the office
+        PreparedStatement statusCheckStmt = conn.prepareStatement(
+            "SELECT status FROM offices WHERE officeCode = ?"
+        );
+        statusCheckStmt.setString(1, officeCode);
+        ResultSet statusRs = statusCheckStmt.executeQuery();
+
+        if (statusRs.next()) {
+            String currentStatus = statusRs.getString("status");
+
+            // If the office is inactive, block the update
+            if ("inactive".equalsIgnoreCase(currentStatus)) {
+                System.out.println("Office is deactivated and cannot be updated.");
+                statusRs.close();
+                statusCheckStmt.close();
+                conn.close();
+                return 0;
             }
-    
-            // Close resources
-            rs.close();
-            fetchStmt.close();
+        } else {
+            System.out.println("Office not found.");
+            statusRs.close();
+            statusCheckStmt.close();
             conn.close();
-            return 1;
-    
-        } catch (SQLTimeoutException e) {
-            System.out.println("Operation timed out while waiting for the lock.");
-            return 0;
-        } catch (Exception e) {
-            e.printStackTrace();
             return 0;
         }
+
+        // Proceed with update if office is active
+        // Lock the row for the given officeCode and fetch data
+        conn.setAutoCommit(false); // Start transaction
+        PreparedStatement fetchStmt = conn.prepareStatement(
+            "SELECT city, phone, addressLine1, addressLine2, state, country, postalCode, territory " +
+            "FROM offices WHERE officeCode = ? FOR UPDATE"
+        );
+        fetchStmt.setString(1, officeCode);
+        ResultSet rs = fetchStmt.executeQuery();
+
+        if (rs.next()) {
+            // Display current data
+            city = rs.getString("city");
+            phone = rs.getString("phone");
+            addressLine1 = rs.getString("addressLine1");
+            addressLine2 = rs.getString("addressLine2");
+            state = rs.getString("state");
+            country = rs.getString("country");
+            postalCode = rs.getString("postalCode");
+            territory = rs.getString("territory");
+
+            System.out.println("\nCurrent Data for Office Code: " + officeCode);
+            System.out.println("City: " + city);
+            System.out.println("Phone: " + phone);
+            System.out.println("Address Line 1: " + addressLine1);
+            System.out.println("Address Line 2: " + addressLine2);
+            System.out.println("State: " + state);
+            System.out.println("Country: " + country);
+            System.out.println("Postal Code: " + postalCode);
+            System.out.println("Territory: " + territory);
+
+            // Prompt user for new information
+            System.out.println("\nEnter new information (leave blank to keep current data):");
+            System.out.print("New City (current: " + city + "): ");
+            String newCity = sc.nextLine();
+            if (!newCity.isBlank()) city = newCity;
+
+            System.out.print("New Phone (current: " + phone + "): ");
+            String newPhone = sc.nextLine();
+            if (!newPhone.isBlank()) phone = newPhone;
+
+            System.out.print("New Address Line 1 (current: " + addressLine1 + "): ");
+            String newAddressLine1 = sc.nextLine();
+            if (!newAddressLine1.isBlank()) addressLine1 = newAddressLine1;
+
+            System.out.print("New Address Line 2 (current: " + addressLine2 + "): ");
+            String newAddressLine2 = sc.nextLine();
+            if (!newAddressLine2.isBlank()) addressLine2 = newAddressLine2;
+
+            System.out.print("New State (current: " + state + "): ");
+            String newState = sc.nextLine();
+            if (!newState.isBlank()) state = newState;
+
+            System.out.print("New Country (current: " + country + "): ");
+            String newCountry = sc.nextLine();
+            if (!newCountry.isBlank()) country = newCountry;
+
+            System.out.print("New Postal Code (current: " + postalCode + "): ");
+            String newPostalCode = sc.nextLine();
+            if (!newPostalCode.isBlank()) postalCode = newPostalCode;
+
+            System.out.print("New Territory (current: " + territory + "): ");
+            String newTerritory = sc.nextLine();
+            if (!newTerritory.isBlank()) territory = newTerritory;
+
+            // Update the row
+            PreparedStatement updateStmt = conn.prepareStatement(
+                "UPDATE offices SET city=?, phone=?, addressLine1=?, addressLine2=?, state=?, country=?, postalCode=?, territory=? WHERE officeCode=?"
+            );
+            updateStmt.setString(1, city);
+            updateStmt.setString(2, phone);
+            updateStmt.setString(3, addressLine1);
+            updateStmt.setString(4, addressLine2);
+            updateStmt.setString(5, state);
+            updateStmt.setString(6, country);
+            updateStmt.setString(7, postalCode);
+            updateStmt.setString(8, territory);
+            updateStmt.setString(9, officeCode);
+
+            updateStmt.executeUpdate();
+            System.out.println("\nUpdate Successful. Press Enter key to continue...");
+            sc.nextLine(); // Wait for user input before returning
+
+            // Commit the transaction
+            conn.commit();
+
+            updateStmt.close();
+        } else {
+            System.out.println("Office not found.");
+        }
+
+        // Close resources
+        rs.close();
+        fetchStmt.close();
+        conn.close();
+        return 1;
+
+    } catch (SQLTimeoutException e) {
+        System.out.println("Operation timed out while waiting for the lock.");
+        return 0;
+    } catch (Exception e) {
+        e.printStackTrace();
+        return 0;
     }
+}
+
     
 
     // Method to deactivate an office and relocate employees

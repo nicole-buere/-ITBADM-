@@ -29,7 +29,9 @@ public class ordering {
             System.out.println("Connected to the database.");
 
             while (true) {
-                System.out.println("\nMenu:");
+                System.out.println("\n[Order Management]");
+                System.out.println("--------------------------------------------------");
+                System.out.println("Menu:");
                 System.out.println("1. Place an Order");
                 System.out.println("2. Update an Order");
                 System.out.println("3. Cancel an Order");
@@ -56,20 +58,40 @@ public class ordering {
 
     private static void placeOrder(Connection connection, Scanner scanner) throws SQLException {
         scanner.nextLine(); // Consume newline
-        System.out.print("Enter Required Date (YYYY-MM-DD): ");
-        String requiredDate = scanner.nextLine();
+    
+        // Input Required Date with Validation
+        String requiredDate;
+        while (true) {
+            System.out.print("Enter Required Date (YYYY-MM-DD): ");
+            requiredDate = scanner.nextLine();
+    
+            try {
+                java.sql.Date orderDate = new java.sql.Date(System.currentTimeMillis()); // Current date as order date
+                java.sql.Date requiredSqlDate = java.sql.Date.valueOf(requiredDate);
+    
+                if (requiredSqlDate.before(orderDate)) {
+                    System.out.println("Invalid Required Date. It cannot be earlier than today's date (" + orderDate + ").");
+                } else {
+                    break; // Valid required date
+                }
+            } catch (IllegalArgumentException e) {
+                System.out.println("Invalid date format. Please enter in YYYY-MM-DD format.");
+            }
+        }
+    
         System.out.print("Comment: ");
         String strComment = scanner.nextLine();
         System.out.print("Enter Customer Number: ");
         int customerNumber = scanner.nextInt();
         scanner.nextLine(); // Consume newline
-
+    
         connection.setAutoCommit(false);
         try {
             System.out.println("\nGenerating order number...");
             int orderNumber = generateOrderNumber(connection);
             System.out.println("Order number generated: " + orderNumber);
-
+    
+            // Insert into Orders
             String insertOrderSQL = "INSERT INTO orders (orderNumber, orderDate, requiredDate, shippedDate, status, comments, customerNumber) VALUES (?, CURDATE(), ?, NULL, 'In Process', ?, ?)";
             try (PreparedStatement orderStmt = connection.prepareStatement(insertOrderSQL)) {
                 orderStmt.setInt(1, orderNumber);
@@ -79,43 +101,44 @@ public class ordering {
                 orderStmt.executeUpdate();
                 System.out.println("Order created successfully.");
             }
-
+    
+            // Add Products to Order
             int nLineNumber = 0;
             boolean addMoreProducts = true;
             while (addMoreProducts) {
                 System.out.print("Enter Product Code: ");
                 String productCode = scanner.nextLine();
-
+    
                 String productCheckSQL = "SELECT * FROM products WHERE productCode = ? FOR UPDATE";
                 try (PreparedStatement productStmt = connection.prepareStatement(productCheckSQL)) {
                     productStmt.setString(1, productCode);
                     ResultSet productResult = productStmt.executeQuery();
-
+    
                     if (productResult.next()) {
                         int availableQuantity = productResult.getInt("quantityInStock");
                         double msrp = productResult.getDouble("MSRP");
-
+    
                         System.out.println("\nProduct locked for order. Press any key to continue...");
                         scanner.nextLine();
-
+    
                         System.out.print("Enter Quantity to Order: ");
                         int quantityOrdered = scanner.nextInt();
                         scanner.nextLine(); // Consume newline
-
+    
                         if (quantityOrdered > availableQuantity) {
                             System.out.println("Insufficient stock. Available: " + availableQuantity);
                             continue;
                         }
-
+    
                         System.out.print("Enter Price Each: ");
                         double priceEach = scanner.nextDouble();
                         scanner.nextLine(); // Consume newline
-
+    
                         if (priceEach < msrp) {
                             System.out.println("Price cannot be below MSRP: " + msrp);
                             continue;
                         }
-
+    
                         nLineNumber++;
                         String insertOrderDetailsSQL = "INSERT INTO orderdetails (orderNumber, productCode, quantityOrdered, priceEach, orderLineNumber) VALUES (?, ?, ?, ?, ?)";
                         try (PreparedStatement orderDetailsStmt = connection.prepareStatement(insertOrderDetailsSQL)) {
@@ -127,7 +150,7 @@ public class ordering {
                             orderDetailsStmt.executeUpdate();
                             System.out.println("Order details updated successfully.");
                         }
-
+    
                         String updateProductSQL = "UPDATE products SET quantityInStock = quantityInStock - ? WHERE productCode = ?";
                         try (PreparedStatement updateProductStmt = connection.prepareStatement(updateProductSQL)) {
                             updateProductStmt.setInt(1, quantityOrdered);
@@ -139,12 +162,12 @@ public class ordering {
                         System.out.println("Product not found.");
                     }
                 }
-
+    
                 System.out.print("Add another product? (yes/no): ");
                 String response = scanner.nextLine();
                 addMoreProducts = response.equalsIgnoreCase("yes");
             }
-
+    
             connection.commit();
             System.out.println("Order processing complete.");
         } catch (Exception e) {
@@ -155,6 +178,7 @@ public class ordering {
             connection.setAutoCommit(true);
         }
     }
+    
 
     private static void updateOrder(Connection connection, Scanner scanner) throws SQLException {
         System.out.println("Enter Order Number to Update: ");
@@ -174,18 +198,25 @@ public class ordering {
             ResultSet rs = pstmt.executeQuery();
     
             if (rs.next()) {
-                // Display all order details
+                // Retrieve and display order details
+                int currentOrderNumber = rs.getInt("orderNumber");
+                java.sql.Date orderDate = rs.getDate("orderDate");
+                java.sql.Date requiredDate = rs.getDate("requiredDate");
+                java.sql.Date shippedDate = rs.getDate("shippedDate");
+                String currentStatus = rs.getString("status");
+                String comments = rs.getString("comments");
+                int customerNumber = rs.getInt("customerNumber");
+    
                 System.out.println("--------------------------------------------------");
-                System.out.println("Order Number:   " + rs.getInt("orderNumber"));
-                System.out.println("Order Date:     " + rs.getDate("orderDate"));
-                System.out.println("Required Date:  " + rs.getDate("requiredDate"));
-                System.out.println("Shipped Date:   " + rs.getDate("shippedDate"));
-                System.out.println("Status:         " + rs.getString("status"));
-                System.out.println("Comments:       " + rs.getString("comments"));
-                System.out.println("Customer Number:" + rs.getInt("customerNumber"));
+                System.out.println("Order Number:   " + currentOrderNumber);
+                System.out.println("Order Date:     " + orderDate);
+                System.out.println("Required Date:  " + requiredDate);
+                System.out.println("Shipped Date:   " + (shippedDate != null ? shippedDate : "Not Shipped"));
+                System.out.println("Status:         " + currentStatus);
+                System.out.println("Comments:       " + comments);
+                System.out.println("Customer Number:" + customerNumber);
                 System.out.println("--------------------------------------------------");
     
-                String currentStatus = rs.getString("status");
                 rs.close();
                 pstmt.close();
     
@@ -196,59 +227,101 @@ public class ordering {
                     return;
                 }
     
-                System.out.println("Press enter key to proceed with status update...");
-                scanner.nextLine();
-    
-                // Display status choices
-                System.out.println("Choose a new status:");
-                System.out.println("[1] Shipped");
-                System.out.println("[2] Completed");
+                System.out.println("What would you like to update?");
+                System.out.println("[1] Required Date");
+                System.out.println("[2] Status");
+                System.out.println("[3] Both Required Date and Status");
                 System.out.print("Enter your choice: ");
                 int choice = scanner.nextInt();
                 scanner.nextLine(); // Consume newline
     
-                String newStatus = null;
+                boolean updatedRequiredDate = false;
+                boolean updatedStatus = false;
     
-                // Validate the choice and determine the new status
-                if (choice == 1) {
-                    newStatus = "Shipped";
-                    if (!"In Process".equalsIgnoreCase(currentStatus)) {
-                        System.out.println("Invalid choice. Only 'In Process' can be changed to 'Shipped'.");
+                if (choice == 1 || choice == 3) {
+                    // Update Required Date
+                    while (true) {
+                        System.out.print("Enter new Required Date (YYYY-MM-DD): ");
+                        String newRequiredDateStr = scanner.nextLine();
+    
+                        try {
+                            java.sql.Date newRequiredDate = java.sql.Date.valueOf(newRequiredDateStr);
+                            if (newRequiredDate.before(orderDate)) {
+                                System.out.println("Invalid Required Date. It cannot be earlier than the Order Date (" + orderDate + ").");
+                            } else {
+                                String updateRequiredDateSQL = "UPDATE orders SET requiredDate = ? WHERE orderNumber = ?";
+                                try (PreparedStatement updateRequiredDateStmt = connection.prepareStatement(updateRequiredDateSQL)) {
+                                    updateRequiredDateStmt.setDate(1, newRequiredDate);
+                                    updateRequiredDateStmt.setInt(2, currentOrderNumber);
+                                    updateRequiredDateStmt.executeUpdate();
+                                    System.out.println("Required Date updated successfully to " + newRequiredDate + ".");
+                                    updatedRequiredDate = true;
+                                }
+                                break; // Exit loop after successful update
+                            }
+                        } catch (IllegalArgumentException e) {
+                            System.out.println("Invalid date format. Please enter in YYYY-MM-DD format.");
+                        }
+                    }
+                }
+    
+                if (choice == 2 || choice == 3) {
+                    // Update Status
+                    System.out.println("Choose a new status:");
+                    System.out.println("[1] Shipped");
+                    System.out.println("[2] Completed");
+                    System.out.print("Enter your choice: ");
+                    int statusChoice = scanner.nextInt();
+                    scanner.nextLine(); // Consume newline
+    
+                    String newStatus = null;
+    
+                    // Validate the choice and determine the new status
+                    if (statusChoice == 1) {
+                        newStatus = "Shipped";
+                        if (!"In Process".equalsIgnoreCase(currentStatus)) {
+                            System.out.println("Invalid choice. Only 'In Process' can be changed to 'Shipped'.");
+                            connection.rollback();
+                            return;
+                        }
+                    } else if (statusChoice == 2) {
+                        newStatus = "Completed";
+                        if (!"Shipped".equalsIgnoreCase(currentStatus)) {
+                            System.out.println("Invalid choice. Only 'Shipped' can be changed to 'Completed'.");
+                            connection.rollback();
+                            return;
+                        }
+                    } else {
+                        System.out.println("Invalid choice. No updates made.");
                         connection.rollback();
                         return;
                     }
-                } else if (choice == 2) {
-                    newStatus = "Completed";
-                    if (!"Shipped".equalsIgnoreCase(currentStatus)) {
-                        System.out.println("Invalid choice. Only 'Shipped' can be changed to 'Completed'.");
-                        connection.rollback();
-                        return;
+    
+                    // Update status (and shippedDate if transitioning to "Shipped")
+                    String updateOrderSQL;
+                    if ("Shipped".equalsIgnoreCase(newStatus)) {
+                        updateOrderSQL = "UPDATE orders SET status = ?, shippedDate = CURDATE() WHERE orderNumber = ?";
+                    } else {
+                        updateOrderSQL = "UPDATE orders SET status = ? WHERE orderNumber = ?";
                     }
+    
+                    pstmt = connection.prepareStatement(updateOrderSQL);
+                    pstmt.setString(1, newStatus);
+                    pstmt.setInt(2, orderNumber);
+                    pstmt.executeUpdate();
+                    System.out.println("Status updated successfully to " + newStatus + ".");
+                    updatedStatus = true;
+                }
+    
+                if (updatedRequiredDate || updatedStatus) {
+                    System.out.println("Update Successful. Press enter key to commit changes...");
+                    scanner.nextLine();
+                    connection.commit();
+                    System.out.println("Order updated successfully.");
                 } else {
-                    System.out.println("Invalid choice. No updates made.");
+                    System.out.println("No updates were made.");
                     connection.rollback();
-                    return;
                 }
-    
-                // Update status (and shippedDate if transitioning to "Shipped")
-                String updateOrderSQL;
-                if ("Shipped".equalsIgnoreCase(newStatus)) {
-                    updateOrderSQL = "UPDATE orders SET status = ?, shippedDate = CURDATE() WHERE orderNumber = ?";
-                } else {
-                    updateOrderSQL = "UPDATE orders SET status = ? WHERE orderNumber = ?";
-                }
-    
-                pstmt = connection.prepareStatement(updateOrderSQL);
-                pstmt.setString(1, newStatus);
-                pstmt.setInt(2, orderNumber);
-                pstmt.executeUpdate();
-    
-                System.out.println("Update Successful. Press enter key to commit changes...");
-                scanner.nextLine();
-    
-                pstmt.close();
-                connection.commit();
-                System.out.println("Order updated successfully. Status: " + newStatus);
             } else {
                 System.out.println("Order not found.");
                 connection.rollback();
@@ -263,8 +336,7 @@ public class ordering {
     
     
     
-    
-    
+
 
     private static void cancelOrder(Connection connection, Scanner scanner) throws SQLException {
         System.out.print("Enter Order Number to Cancel: ");
@@ -300,6 +372,16 @@ public class ordering {
                     connection.rollback();
                     return;
                 }
+            }
+    
+            // Ask for confirmation to cancel the order
+            System.out.println("Are you sure you want to cancel this order? (yes/no): ");
+            String confirmation = scanner.nextLine();
+    
+            if (!"yes".equalsIgnoreCase(confirmation)) {
+                System.out.println("Order cancellation aborted.");
+                connection.rollback(); // Rollback transaction if the user cancels
+                return;
             }
     
             // Retrieve order details and lock the rows for the associated products
@@ -366,6 +448,7 @@ public class ordering {
         }
     }
     
+    
 
     private static int generateOrderNumber(Connection connection) throws SQLException {
         String getMaxOrderSQL = "SELECT MAX(orderNumber) FROM orders FOR UPDATE";
@@ -378,3 +461,4 @@ public class ordering {
         return 1;
     }
 }
+

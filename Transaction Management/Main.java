@@ -406,13 +406,14 @@ class employees {
     public int officeCode;
     public int reportsTo;
     public String jobTitle;
+    public String active;
 
     public employees() {}
 
     // Method to view employee details
     public int viewEmployee() {
         Scanner sc = new Scanner(System.in);
-        System.out.println("Enter Employee Number:");
+        System.out.print("\nEnter Employee Number to View: ");
         employeeNumber = sc.nextLine();
 
         try {
@@ -424,7 +425,7 @@ class employees {
             
             // select the employee and issue a READ lock to the row
             PreparedStatement pstmt = conn.prepareStatement(
-                "SELECT lastName, firstName, extension, email, officeCode, reportsTo, jobTitle FROM employees WHERE employeeNumber=? AND active='Y' LOCK IN SHARE MODE"
+                "SELECT lastName, firstName, extension, email, officeCode, reportsTo, jobTitle, active FROM employees WHERE employeeNumber=? LOCK IN SHARE MODE"
             );
             pstmt.setString(1, employeeNumber);
 
@@ -435,7 +436,7 @@ class employees {
 
             System.out.println("Searching for employee with number " + employeeNumber);
             ResultSet rs = pstmt.executeQuery();
-            TimeUnit.SECONDS.sleep(30);
+            TimeUnit.SECONDS.sleep(5);
             if (rs.next()) {
                 lastName = rs.getString("lastName");
                 firstName = rs.getString("firstName");
@@ -444,16 +445,22 @@ class employees {
                 officeCode = rs.getInt("officeCode");
                 reportsTo = rs.getInt("reportsTo");
                 jobTitle = rs.getString("jobTitle");
+                active = rs.getString("active");
 
                 System.out.println("\nName: " + firstName + " " + lastName);
                 System.out.println("Extension: " + extension);
                 System.out.println("Email: " + email);
                 System.out.println("Office Code: " + officeCode);
                 System.out.println("Reports to employee number: " + reportsTo);
-                System.out.println("Job Title: " + jobTitle + "\n");
+                System.out.println("Job Title: " + jobTitle + "");
+                if(active == "Y") {
+                    System.out.println("Status: Active\n");
+                } else {
+                    System.out.println("Status: Deactivated\n");
+                }
 
             } else {
-                System.out.println("No active employee with the employee number " + employeeNumber);
+                System.out.println("No employee with the employee number " + employeeNumber + " exists");
             }
 
             rs.close();
@@ -476,7 +483,7 @@ class employees {
         Scanner sc = new Scanner(System.in);
         // overall sales manager employee Number is 1165 in Orignial DB Sales
         int overallSalesManagerNum = 1165;
-        System.out.println("Enter Employee Number to Deactivate:");
+        System.out.print("\nEnter Employee Number to Deactivate: ");
         employeeNumber = sc.nextLine();
 
         try {
@@ -576,9 +583,9 @@ class employees {
         Scanner sc = new Scanner(System.in);
         int choice;
 
-        System.out.println("Press 0 to exit....");
         while (true) {
-            System.out.println("Enter [1] View Employee [2] Deactivate Employee: ");
+            System.out.println("Employee Management Menu:\n[1] View Employee\n[2] Deactivate Employee\n[0] Exit Employee Management\n");
+            System.out.print("Enter your choice: ");
             choice = sc.nextInt();
             sc.nextLine(); // Consume newline character
 
@@ -591,15 +598,14 @@ class employees {
                 case 2:
                     employee.deactivateEmployee();
                     break;
-                default:
-                    System.out.println("Exiting Offices Management.");
+                case 0:
+                    System.out.println("Exiting Employee Management.");
                     return;
+                default:
+                    System.out.println("Invalid choice. Please select a valid option.");
             }
 
-            System.out.println("Press enter key to continue....");
-            sc.nextLine();
-
-            System.out.println("\nPress Enter to return to the offices management menu...");
+            System.out.println("\nPress Enter to return to the employee management menu...");
             sc.nextLine(); // Wait for user to press Enter
         }
         

@@ -510,17 +510,19 @@ class employees {
 
                 // lock employees table
                 PreparedStatement pstmtEmployeesTable = conn.prepareStatement(
-                    "SELECT MAX(employeeNumber)+1 FROM employees FOR UPDATE"  
+                    "SELECT reportsTo FROM employees WHERE reportsTo=?FOR UPDATE"  
                 );
-                System.out.println("Locking employees table");
+                pstmtEmployeesTable.setString(1, employeeNumber);
+                System.out.println("Locking employees who report to employee number " + employeeNumber);
                 pstmtEmployeesTable.executeQuery();
                 TimeUnit.SECONDS.sleep(5);
 
                 // lock customers table
                 PreparedStatement pstmtCustomersTable = conn.prepareStatement(
-                    "SELECT MAX(customerNumber)+1 FROM customers FOR UPDATE"  
+                    "SELECT salesRepEmployeeNumber FROM customers WHERE salesRepEmployeeNumber=? FOR UPDATE"  
                 );
-                System.out.println("Locking customers table");
+                pstmtCustomersTable.setString(1, employeeNumber);
+                System.out.println("Locking customers who's sales rep is employee number " + employeeNumber);
                 pstmtCustomersTable.executeQuery();
                 TimeUnit.SECONDS.sleep(5);
 

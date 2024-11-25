@@ -488,17 +488,9 @@ class employees {
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
 
-            // lock employees table
-            PreparedStatement pstmtEmployeesTable = conn.prepareStatement(
-                "SELECT MAX(employeeNumber)+1 FROM employees FOR UPDATE"  
-            );
-            System.out.println("Locking employees table");
-            pstmtEmployeesTable.executeQuery();
-            TimeUnit.SECONDS.sleep(5);
-
-            // find an employee with that employee number
+            // find an employee with that employee number and lock that row
             PreparedStatement pstmtEmployee = conn.prepareStatement(
-                "SELECT reportsTo FROM employees WHERE employeeNumber=? AND active='Y'"
+                "SELECT reportsTo FROM employees WHERE employeeNumber=? AND active='Y' FOR UPDATE"
             );
             pstmtEmployee.setString(1, employeeNumber);
 
@@ -508,6 +500,14 @@ class employees {
 
             // if an employee was found in the table
             if(rsEmployees.isBeforeFirst()) {
+
+                // lock employees table
+                PreparedStatement pstmtEmployeesTable = conn.prepareStatement(
+                    "SELECT MAX(employeeNumber)+1 FROM employees FOR UPDATE"  
+                );
+                System.out.println("Locking employees table");
+                pstmtEmployeesTable.executeQuery();
+                TimeUnit.SECONDS.sleep(5);
 
                 // lock customers table
                 PreparedStatement pstmtCustomersTable = conn.prepareStatement(
@@ -551,6 +551,7 @@ class employees {
                 }
 
                 // close prepared statements
+                pstmtEmployeesTable.close();
                 pstmtCustomersTable.close();
                 pstmtRelocate.close();
                 pstmtClear.close();
@@ -559,7 +560,6 @@ class employees {
             else {
                 System.out.println("No active employee with that number exists.");
             }
-            pstmtEmployeesTable.close();
             pstmtEmployee.close();
             conn.close();
             return 1;
@@ -584,15 +584,25 @@ class employees {
 
             employees employee = new employees();
 
-            if (choice == 1) employee.viewEmployee();
-                else if (choice == 2) employee.deactivateEmployee();
-                    else if (choice == 0) break;
+            switch (choice) {
+                case 1:
+                    employee.viewEmployee();
+                    break;
+                case 2:
+                    employee.deactivateEmployee();
+                    break;
+                default:
+                    System.out.println("Exiting Offices Management.");
+                    return;
+            }
 
             System.out.println("Press enter key to continue....");
             sc.nextLine();
-        }
 
-        sc.close();
+            System.out.println("\nPress Enter to return to the offices management menu...");
+            sc.nextLine(); // Wait for user to press Enter
+        }
+        
     }
 }
 

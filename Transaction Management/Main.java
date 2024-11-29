@@ -422,7 +422,7 @@ class employees {
 
         try {
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=root&password=MyNewPass"
+                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC","root", "DLSU123!"
             );
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
@@ -494,7 +494,7 @@ class employees {
             int customerReassignCount = 0;
             int deleteCount;
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC&user=root&password=MyNewPass"
+                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC","root", "DLSU123!"
             );
             System.out.println("Connection Successful");
             conn.setAutoCommit(false);
@@ -644,13 +644,13 @@ class offices {
 
         try {
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useSSL=false&serverTimezone=UTC"
+                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC","root", "DLSU123!"
 
             );
             System.out.println("Connection Successful");
             
             PreparedStatement pstmt = conn.prepareStatement(
-                "SELECT city, phone, addressLine1, addressLine2, state, country, postalCode, territory, status FROM offices WHERE officeCode=?"
+                "SELECT city, phone, addressLine1, addressLine2, state, country, postalCode, territory, status FROM offices WHERE officeCode=?FOR SHARE"
             );
             pstmt.setString(1, officeCode);
 
@@ -703,7 +703,7 @@ public int updateOffice() {
     try {
         // Establish a connection to the database
         Connection conn = DriverManager.getConnection(
-            "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC"
+            "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC","root", "DLSU123!"
         );
         System.out.println("Connection Successful");
 
@@ -858,7 +858,7 @@ public int updateOffice() {
         try {
             // Establish a connection to the database
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC"
+                "jdbc:mysql://localhost:3306/dbsales?useTimezone=true&serverTimezone=UTC","root", "DLSU123!"
             );
             System.out.println("Connection Successful");
     
